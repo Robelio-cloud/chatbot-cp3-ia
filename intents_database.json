@@ -139,13 +139,30 @@
                 "tou com fome",
                 "pedi comida",
                 "fazer pedido",
-                "vou pedir"
+                "vou pedir",
+                "quero o vegetariano",
+                "quero um x-bacon",
+                "quero o x-tudo",
+                "me traz um x-burger",
+                "quero um hamburguer",
+                "pedir x-salada",
+                "quero pedir x-egg",
+                "me dá um x-frango",
+                "quero x-calabresa",
+                "quero refrigerante",
+                "quero água",
+                "quero suco de laranja",
+                "quero cerveja",
+                "quero milkshake",
+                "quero chá gelado",
+                "me traz um refrigerante",
+                "me dá uma água"
             ],
             "responses": [
-                "Show! Nossos hits são de peso! Se liga no setlist:\n• **Master of Burgers (Metallica)** - R$ 35\n• **Appetite for Destruction (Guns N' Roses)** - R$ 38\n• **Highway to Hell (AC/DC)** - R$ 33\n• **Ace of Spades (Motörhead)** - Vegano - R$ 32\n\nQual vai ser a pedida?",
-                "Volume no máximo! 🎸 Nossos clássicos incluem:\n• **The Trooper (Iron Maiden)** - R$ 36\n• **Paranoid (Black Sabbath)** - R$ 34\n• **Stairway to Heaven (Led Zeppelin)** - R$ 40\n\nQual desses hinos vai matar sua fome?",
-                "Bora pro rock! 🤘 Temos essas opções devastadoras:\n• **Master of Burgers** - O clássico do Metallica - R$ 35\n• **Highway to Hell** - Levemente apimentado - R$ 33\n• **Stairway to Heaven** - Nosso burger lendário - R$ 40\n\nO que você escolhe?",
-                "Prepara o palco! 🎸 Nossos sucessos incluem:\n• **Appetite for Destruction** - Explosivo como o Guns - R$ 38\n• **The Trooper** - Batalha épica do Iron Maiden - R$ 36\n• **Ace of Spades** - Opção vegana do Motörhead - R$ 32\n\nQual vai ser?"
+                "Perfeito! Vou preparar o seu pedido. Estará pronto em aproximadamente 15 minutos. Quer adicionar algo mais?",
+                "Show! Pedido anotado. Tempo de preparo: cerca de 15 minutos. Quer incluir alguma bebida ou acompanhamento?",
+                "Beleza! Seu pedido já está na parada. Fica pronto em uns 15 minutos. Algo mais pra completar?",
+                "Massa! Pedido confirmado. Preparo leva em torno de 15 minutos. Quer adicionar mais alguma coisa?"
             ]
         },
         "menu": {
@@ -176,10 +193,10 @@
                 "ver opções"
             ],
             "responses": [
-                "Aqui está o nosso setlist completo! 🤘\n\n**HITS DO METAL:**\n• **Master of Burgers (Metallica)** - R$ 35\n• **Appetite for Destruction (Guns N' Roses)** - R$ 38\n• **The Trooper (Iron Maiden)** - R$ 36\n\n**CLÁSSICOS DO ROCK:**\n• **Highway to Hell (AC/DC)** - R$ 33 (levemente apimentado! 🔥)\n• **Paranoid (Black Sabbath)** - R$ 34\n• **Stairway to Heaven (Led Zeppelin)** - R$ 40\n\n**OPÇÃO VEGANA:**\n• **Ace of Spades (Motörhead)** - R$ 32\n\nTemos também acompanhamentos e bebidas pra completar o show!",
-                "Bora conhecer nosso arsenal! 🎸\n\n**OS PESADOS:**\n• Master of Burgers - O poder do Metallica - R$ 35\n• Appetite for Destruction - Explosão Guns N' Roses - R$ 38\n• The Trooper - Batalha Iron Maiden - R$ 36\n\n**OS CLÁSSICOS:**\n• Highway to Hell - Com fogo AC/DC - R$ 33\n• Paranoid - Loucura Black Sabbath - R$ 34\n• Stairway to Heaven - Lenda Led Zeppelin - R$ 40\n\n**VEGANO ROCK:**\n• Ace of Spades - Motörhead verde - R$ 32",
-                "Nosso cardápio é puro rock! 🤘\n\n• **Master of Burgers** (Metallica) - R$ 35\n• **Appetite for Destruction** (Guns N' Roses) - R$ 38\n• **The Trooper** (Iron Maiden) - R$ 36\n• **Highway to Hell** (AC/DC) - R$ 33\n• **Paranoid** (Black Sabbath) - R$ 34\n• **Stairway to Heaven** (Led Zeppelin) - R$ 40\n• **Ace of Spades** (Motörhead - Vegano) - R$ 32\n\nTodos feitos com ingredientes de primeira!",
-                "Se liga na nossa discografia gastronômica! 🎵\n\n**METAL SUPREMO:** Master of Burgers (R$ 35), Appetite for Destruction (R$ 38), The Trooper (R$ 36)\n\n**ROCK CLÁSSICO:** Highway to Hell (R$ 33), Paranoid (R$ 34), Stairway to Heaven (R$ 40)\n\n**ALTERNATIVO:** Ace of Spades Vegano (R$ 32)\n\nQual vai ser sua escolha?"
+                "Aqui está o nosso cardápio atualizado:\n• Hambúrguer - R$ 20,00\n• X-Burger - R$ 23,00\n• X-Salada - R$ 25,50\n• X-Bacon - R$ 26,00\n• X-Egg - R$ 24,00\n• X-Calabresa - R$ 23,00\n• X-Frango - R$ 23,00\n• X-Tudo - R$ 31,00\n• Vegetariano - R$ 25,00\n\nBEBIDAS:\n• Refrigerante (lata) — R$ 6,00\n• Água — R$ 4,00\n• Suco de Laranja Natural — R$ 7,50\n• Cerveja (lata) — R$ 8,00\n• Milkshake de Chocolate — R$ 12,00\n• Milkshake de Morango — R$ 12,00\n• Chá Gelado — R$ 5,50\n\nTambém temos acompanhamentos para completar seu pedido!",
+                "Confira nossas opções clássicas e bebidas:\n• Hambúrguer (R$ 20,00)\n• X-Burger (R$ 23,00)\n• X-Salada (R$ 25,50)\n• X-Bacon (R$ 26,00)\n• X-Egg (R$ 24,00)\n• X-Calabresa (R$ 23,00)\n• X-Frango (R$ 23,00)\n• X-Tudo (R$ 31,00)\n• Vegetariano (R$ 25,00)\n\nBEBIDAS:\n• Refrigerante (lata) — R$ 6,00\n• Água — R$ 4,00\n• Suco de Laranja Natural — R$ 7,50\n• Cerveja (lata) — R$ 8,00\n• Milkshake de Chocolate — R$ 12,00\n• Milkshake de Morango — R$ 12,00\n• Chá Gelado — R$ 5,50",
+                "Nosso cardápio está assim:\n• Hambúrguer - R$ 20,00\n• X-Burger - R$ 23,00\n• X-Salada - R$ 25,50\n• X-Bacon - R$ 26,00\n• X-Egg - R$ 24,00\n• X-Calabresa - R$ 23,00\n• X-Frango - R$ 23,00\n• X-Tudo - R$ 31,00\n• Vegetariano - R$ 25,00\n\nBEBIDAS:\n• Refrigerante (lata) — R$ 6,00\n• Água — R$ 4,00\n• Suco de Laranja Natural — R$ 7,50\n• Cerveja (lata) — R$ 8,00\n• Milkshake de Chocolate — R$ 12,00\n• Milkshake de Morango — R$ 12,00\n• Chá Gelado — R$ 5,50\n\nO que vai ser hoje?",
+                "Aqui estão as nossas opções principais (lanches + bebidas):\nHambúrguer (R$ 20,00), X-Burger (R$ 23,00), X-Salada (R$ 25,50), X-Bacon (R$ 26,00), X-Egg (R$ 24,00), X-Calabresa (R$ 23,00), X-Frango (R$ 23,00), X-Tudo (R$ 31,00) e Vegetariano (R$ 25,00).\n\nBEBIDAS: Refrigerante (R$ 6,00), Água (R$ 4,00), Suco de Laranja Natural (R$ 7,50), Cerveja (R$ 8,00), Milkshakes (R$ 12,00), Chá Gelado (R$ 5,50)."
             ]
         },
         "prices": {
@@ -210,13 +227,35 @@
                 "preços dos burgers",
                 "quanto sai",
                 "valor de cada",
-                "preço individual"
+                "preço individual",
+                "quanto vai ficar o x-tudo",
+                "quanto vai ficar o x-bacon",
+                "quanto fica o x-burger",
+                "quanto fica o hamburguer",
+                "vai ficar quanto o x-salada",
+                "vai ficar quanto o vegetariano",
+                "quanto vai custar o x-egg",
+                "quanto custa o x-calabresa",
+                "quanto custa o x-frango",
+                "quanto é o x-tudo",
+                "qual o preço do x-bacon",
+                "qual o valor do chá gelado",
+                "preço do refrigerante",
+                "quanto vai sair o milkshake",
+                "quanto vai ficar o lanche",
+                "quanto custa o lanche",
+                "preço do lanche",
+                "quanto vai ficar a bebida",
+                "quanto custa a bebida",
+                "preço da bebida",
+                "quanto vai ficar",
+                "quanto custa aqui"
             ],
             "responses": [
-                "Se liga na tabela de preços dos nossos hits:\n• **Master of Burgers**: R$ 35\n• **Appetite for Destruction**: R$ 38\n• **The Trooper**: R$ 36\n• **Highway to Hell**: R$ 33\n• **Paranoid**: R$ 34\n• **Stairway to Heaven**: R$ 40\n• **Ace of Spades (Vegano)**: R$ 32",
-                "Valores pra detonar na fome:\n• **Clássicos (R$ 32-34)**: Ace of Spades, Highway to Hell, Paranoid.\n• **Hinos do Metal (R$ 35-38)**: Master of Burgers, The Trooper, Appetite for Destruction.\n• **Lendário (R$ 40)**: Stairway to Heaven, nosso burger mais épico!",
-                "Nossos preços são justos como um bom riff! 🎸\n\nDo mais em conta ao premium:\nR$ 32 - Ace of Spades (Vegano)\nR$ 33 - Highway to Hell\nR$ 34 - Paranoid\nR$ 35 - Master of Burgers\nR$ 36 - The Trooper\nR$ 38 - Appetite for Destruction\nR$ 40 - Stairway to Heaven",
-                "Aqui está a nossa tabela rock! 🤘\n\n💰 **ENTRADA VIP (R$ 32-34):** Ace of Spades, Highway to Hell, Paranoid\n💰 **PISTA (R$ 35-36):** Master of Burgers, The Trooper\n💰 **CAMAROTE (R$ 38-40):** Appetite for Destruction, Stairway to Heaven"
+                "Tabela de preços atualizada:\n• Hambúrguer - R$ 20,00\n• X-Burger - R$ 23,00\n• X-Salada - R$ 25,50\n• X-Bacon - R$ 26,00\n• X-Egg - R$ 24,00\n• X-Calabresa - R$ 23,00\n• X-Frango - R$ 23,00\n• X-Tudo - R$ 31,00\n• Vegetariano - R$ 25,00\n\nBEBIDAS:\n• Refrigerante (lata) — R$ 6,00\n• Água — R$ 4,00\n• Suco de Laranja Natural — R$ 7,50\n• Cerveja (lata) — R$ 8,00\n• Milkshake de Chocolate — R$ 12,00\n• Milkshake de Morango — R$ 12,00\n• Chá Gelado — R$ 5,50",
+                "Preços por item:\nHambúrguer: R$ 20,00\nX-Burger: R$ 23,00\nX-Salada: R$ 25,50\nX-Bacon: R$ 26,00\nX-Egg: R$ 24,00\nX-Calabresa: R$ 23,00\nX-Frango: R$ 23,00\nX-Tudo: R$ 31,00\nVegetariano: R$ 25,00\n\nBebidas:\nRefrigerante (lata): R$ 6,00\nÁgua: R$ 4,00\nSuco de Laranja Natural: R$ 7,50\nCerveja (lata): R$ 8,00\nMilkshake de Chocolate: R$ 12,00\nMilkshake de Morango: R$ 12,00\nChá Gelado: R$ 5,50",
+                "Valores atualizados:\nR$ 20,00 - Hambúrguer\nR$ 23,00 - X-Burger / X-Calabresa / X-Frango\nR$ 24,00 - X-Egg\nR$ 25,00 - Vegetariano\nR$ 25,50 - X-Salada\nR$ 26,00 - X-Bacon\nR$ 31,00 - X-Tudo\n\nBebidas:\nR$ 4,00 - Água\nR$ 6,00 - Refrigerante (lata)\nR$ 7,50 - Suco de Laranja Natural\nR$ 8,00 - Cerveja (lata)\nR$ 12,00 - Milkshake (Chocolate / Morango)\nR$ 5,50 - Chá Gelado",
+                "Aqui estão os preços atualizados para facilitar o pedido: Hambúrguer (R$ 20,00), X-Burger (R$ 23,00), X-Salada (R$ 25,50), X-Bacon (R$ 26,00), X-Egg (R$ 24,00), X-Calabresa (R$ 23,00), X-Frango (R$ 23,00), X-Tudo (R$ 31,00), Vegetariano (R$ 25,00).\n\nBebidas: Refrigerante (R$ 6,00), Água (R$ 4,00), Suco de Laranja Natural (R$ 7,50), Cerveja (R$ 8,00), Milkshakes (R$ 12,00), Chá Gelado (R$ 5,50)."
             ]
         },
         "delivery_time": {
@@ -329,6 +368,52 @@
                 "Palco aberto! 🎵\nTerça-feira a Domingo das 18h às 00h. Delivery rola até 23h30. Segunda é nosso dia off pra manutenção dos equipamentos!"
             ]
         },
+        "ingredientes": {
+            "description": "Consultas sobre ingredientes e receitas dos lanches",
+            "examples": [
+                "ingredientes",
+                "quais são os ingredientes",
+                "o que tem no prato",
+                "buscar ingredientes",
+                "preciso dos ingredientes",
+                "receita do lanche",
+                "receita do prato",
+                "o que tem no lanche",
+                "composição",
+                "o que leva",
+                "ingredientes do x-bacon",
+                "o que tem no hamburguer",
+                "receita do x-tudo",
+                "composição do vegetariano",
+                "o que leva no x-frango",
+                "ingredientes do x-burger",
+                "quais ingredientes tem",
+                "me mostra ingredientes",
+                "lista de ingredientes",
+                "o que vai no lanche",
+                "o que vai no x-tudo",
+                "o q vai no x-bacon",
+                "oq vai no hamburguer",
+                "que vai no x-salada",
+                "composicao do lanche",
+                "ingredientes do burger",
+                "receita do hamburguer",
+                "o ke tem no prato",
+                "ingredientis",
+                "ke tem no lanchi",
+                "quais ingredientes do x-salada",
+                "me mostra a receita",
+                "como é feito o x-bacon",
+                "como fazer x-tudo",
+                "modo de preparo"
+            ],
+            "responses": [
+                "Claro! Sobre qual lanche você quer saber os ingredientes?",
+                "Perfeito! Me fala qual burger você quer conhecer a receita.",
+                "Legal! Qual lanche você quer saber a composição?",
+                "Beleza! De qual item do cardápio você quer ver os ingredientes?"
+            ]
+        },
         "fallback": {
             "description": "Respostas padrão para entradas não reconhecidas",
             "examples": [
@@ -359,21 +444,21 @@
                 "nao captei"
             ],
             "responses": [
-                "Desculpe, essa parte do som ficou meio distorcida. 😵‍💫 Posso te ajudar com o cardápio, pedidos, preços, horários ou reclamações.",
-                "Não captei essa mensagem, rockstar. Tente de novo. Quer saber sobre nossos lanches, fazer um pedido ou ver os horários?",
-                "Hmm, acho que perdi essa parte do riff. Pode reformular sua pergunta? Estou aqui pra falar dos nossos burgers lendários!",
-                "Som meio embolado aí! 🎸 Vamos tentar de novo? Posso te ajudar com menu, pedidos, preços, delivery, horários ou resolver algum problema."
+                "Desculpe, essa parte do som ficou meio distorcida. 😵‍💫 Posso te ajudar com o cardápio, pedidos, preços, horários, ingredientes ou reclamações.",
+                "Não captei essa mensagem, rockstar. Tente de novo. Quer saber sobre nossos lanches, fazer um pedido, ver os horários ou ingredientes?",
+                "Hmm, acho que perdi essa parte do riff. Pode reformular sua pergunta? Estou aqui pra falar dos nossos burgers lendários e suas receitas!",
+                "Som meio embolado aí! 🎸 Vamos tentar de novo? Posso te ajudar com menu, pedidos, preços, delivery, horários, ingredientes ou resolver algum problema."
             ]
         }
     },
     "metadata": {
-        "total_intents": 10,
-        "total_examples": 220,
-        "total_responses": 40,
+        "total_intents": 11,
+        "total_examples": 296,
+        "total_responses": 48,
         "business_type": "Lanchonete Temática Rock/Metal",
         "business_name": "RockStar Burger",
         "created_date": "2025-10-03",
-        "version": "1.0",
-        "description": "Base de dados de intenções para chatbot de lanchonete temática rock/metal com múltiplas variações linguísticas incluindo erros de digitação comuns"
+        "version": "1.6",
+        "description": "Base de dados de intenções para chatbot de lanchonete temática rock/metal com múltiplas variações linguísticas incluindo erros de digitação comuns. Inclui integração com API Deepseek para consulta de ingredientes. Melhorada distinção entre pedidos, consultas de receitas e consultas de preços com exemplos específicos e genéricos. Filtro de palavras genéricas no extrator de preços."
     }
 }

@@ -12,9 +12,9 @@ from nltk.stem import WordNetLemmatizer
 from sklearn.metrics.pairwise import cosine_similarity
 import json
 from datetime import datetime
-
-# --- Estilização Gótica e Rock'n'Roll ---
-# NOTA: A injeção de CSS com unsafe_allow_html é um recurso poderoso, mas deve ser usado com cuidado.
+from pathlib import Path
+import unicodedata
+import requests
 st.markdown("""
     <style>
         /* Importa uma fonte gótica do Google Fonts */
@@ -83,169 +83,477 @@ st.markdown("""
 """, unsafe_allow_html=True)
 # --- Fim do bloco visual ---
 
-# Dataset temático de intents para RockStar Burger
-intents = {
-    "greeting": {
-        "examples": [
-            "e aí", "fala", "hey", "hello", "oi", "olá", "bom dia", "boa tarde", "boa noite",
-            "salve", "eae", "oi boa tarde", "ola", "cumprimentando vocês", "oii", "oie",
-            "fla", "flw", "eai", "oi pessoal", "oiii", "opa", "opaaa", "salveee",
-            "heey", "helo", "hellooo", "bom diaa", "boaa tarde", "boaaa noite"
-        ],
-        "responses": [
-            "E aí, rockstar! 🤘 Bem-vindo ao RockStar Burger! Pronto pra detonar na fome?",
-            "Fala, lenda! 💀 Chega mais, a casa do rock tá aberta. O que você manda hoje?",
-            "Salve! Bem-vindo ao nosso palco. Qual o seu pedido pra começar o show?",
-            "Hey! Que a força do metal esteja com você! Como posso te ajudar?"
-        ]
-    },
+# Carrega intents do arquivo `intents_database.json` para permitir atualizações dinâmicas do menu
+try:
+    intents_path = Path(__file__).resolve().parent / "intents_database.json"
+    with open(intents_path, 'r', encoding='utf-8') as f:
+        intents_blob = json.load(f)
+        intents = intents_blob.get('intents', {})
+except Exception as e:
+    # Se falhar ao carregar, definimos um fallback mínimo para manter a aplicação funcionando
+    st.error(f"Aviso: não foi possível carregar 'intents_database.json' — usando intents padrão. Erro: {e}")
+    intents = {
+        "greeting": {"examples": ["oi"], "responses": ["E aí! Bem-vindo ao RockStar Burger!"]},
+        "menu": {"examples": ["menu"], "responses": ["Hambúrguer - R$ 20,00\nX-Burger - R$ 23,00"]},
+        "purchase": {"examples": ["quero pedir"], "responses": ["O que você quer pedir?"]},
+        "prices": {"examples": ["preço"], "responses": ["Hambúrguer: R$ 20,00"]},
+        "fallback": {"examples": [], "responses": ["Desculpe, não entendi. Pode repetir?"]}
+    }
+
+
+def parse_menu_from_intents(intents_blob):
+    """Tenta extrair lanches e bebidas das respostas do intent 'menu'.
+
+    Retorna dict: {'lanches': [(nome, preco_str), ...], 'bebidas': [...]}.
+    """
+    menu = {'lanches': [], 'bebidas': []}
+    seen = {'lanches': set(), 'bebidas': set()}
+    try:
+        responses = intents_blob.get('menu', {}).get('responses', [])
+        if not responses:
+            responses = intents_blob.get('prices', {}).get('responses', [])
+
+        for resp in responses:
+            # Divide texto em duas seções: antes de 'BEBIDAS' e depois (caso apareça no meio da string)
+            parts = re.split(r'\bBEBIDAS?[:\s]*', resp, flags=re.IGNORECASE)
+            lanche_part = parts[0]
+            bebida_part = parts[1] if len(parts) > 1 else ''
+
+            def extract_items(section_text):
+                items = []
+                # quebra por linhas e também por vírgulas (para formatos compactos)
+                candidates = []
+                for line in section_text.splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    # Se a linha contém vários itens separados por vírgula, separa
+                    if ',' in line and 'R$' in line:
+                        parts_line = [p.strip() for p in re.split(r',|;|\n', line) if p.strip()]
+                        candidates.extend(parts_line)
+                    else:
+                        candidates.append(line)
+
+                for part in candidates:
+                    # Remove marcadores comuns
+                    part = re.sub(r'^[•\-*\s]+', '', part)
+
+                    # Tenta vários padrões previsíveis
+                    m = re.match(r'(.+?)\s*[-–—:]\s*R\$\s*([\d.,]+)', part)
+                    if m:
+                        name = m.group(1).strip()
+                        price = m.group(2).strip()
+                        items.append((name, price))
+                        continue
+
+                    m2 = re.match(r'(.+?)\s*\(\s*R\$\s*([\d.,]+)\s*\)', part)
+                    if m2:
+                        name = m2.group(1).strip()
+                        price = m2.group(2).strip()
+                        items.append((name, price))
+                        continue
+
+                    # Caso haja 'R$' em qualquer lugar, tenta extrair que vem antes e depois
+                    if 'R$' in part:
+                        try:
+                            left, right = part.split('R$', 1)
+                            name = left.replace('—', '').replace('-', '').strip(' :•')
+                            price = re.search(r'([\d.,]+)', right)
+                            if price:
+                                items.append((name, price.group(1).strip()))
+                                continue
+                        except Exception:
+                            pass
+
+                return items
+
+            # Extrai lanches e bebidas separadamente
+            lanches_found = extract_items(lanche_part)
+            bebidas_found = extract_items(bebida_part)
+
+            # Se não encontrou bebidas na segunda parte, tenta procurar na primeira parte por padrões inline
+            if not bebidas_found:
+                # procura por 'BEBIDAS:' inline na lanche_part (após uma vírgula)
+                inline = re.search(r'BEBIDAS?[:\s]*(.*)$', resp, flags=re.IGNORECASE)
+                if inline:
+                    bebidas_found = extract_items(inline.group(1))
+
+            # adiciona sem duplicatas
+            for name, price in lanches_found:
+                key = name.lower()
+                if key not in seen['lanches']:
+                    menu['lanches'].append((name, price))
+                    seen['lanches'].add(key)
+
+            for name, price in bebidas_found:
+                key = name.lower()
+                if key not in seen['bebidas']:
+                    menu['bebidas'].append((name, price))
+                    seen['bebidas'].add(key)
+
+        return menu
+    except Exception:
+        return menu
+
+
+# Prepara menu extraído para uso na interface
+# Tenta carregar um menu estruturado em `menu.json` (preferência). Se não houver, usa o parser das intents.
+try:
+    menu_json_path = Path(__file__).resolve().parent / "menu.json"
+    if menu_json_path.exists():
+        with open(menu_json_path, 'r', encoding='utf-8') as mf:
+            MENU_DATA = json.load(mf)
+    else:
+        MENU_DATA = parse_menu_from_intents(intents)
+except Exception:
+    MENU_DATA = parse_menu_from_intents(intents)
+
+
+def build_prices_response(query=None):
+    """Gera uma string de preços com base em MENU_DATA.
+    Se a query mencionar bebidas, retorna somente bebidas; se mencionar lanches, retorna somente lanches;
+    caso contrário, retorna ambos.
+    """
+    try:
+        q = (query or '').lower()
+        lanches = MENU_DATA.get('lanches', [])
+        bebidas = MENU_DATA.get('bebidas', [])
+
+        # palavras-chave simples para identificar se o usuário está perguntando sobre bebidas
+        bebida_keywords = ['refrigerante', 'água', 'agua', 'suco', 'cerveja', 'milkshake', 'chá', 'cha', 'bebida', 'bebidas']
+        lanche_keywords = ['hambúrguer', 'hamburguer', 'hamburgueres', 'lanche', 'lanches', 'x-burger', 'x-bacon', 'x-salada', 'x-tudo', 'vegetariano']
+
+        wants_bebida = any(k in q for k in bebida_keywords)
+        wants_lanche = any(k in q for k in lanche_keywords)
+
+        def iter_items(coll):
+            # Normaliza cada item para (name, price)
+            for itm in coll:
+                if isinstance(itm, dict):
+                    yield itm.get('name', '').strip(), itm.get('price', '').strip()
+                elif isinstance(itm, (list, tuple)) and len(itm) >= 2:
+                    yield str(itm[0]).strip(), str(itm[1]).strip()
+                elif isinstance(itm, str):
+                    # tenta extrair "Nome - R$ 12,00" ou "Nome (R$ 12,00)"
+                    s = itm.strip()
+                    m = re.match(r'(.+?)\s*[-–—:]\s*R\$\s*([\d.,]+)', s)
+                    if m:
+                        yield m.group(1).strip(), m.group(2).strip()
+                    else:
+                        m2 = re.match(r'(.+?)\s*\(\s*R\$\s*([\d.,]+)\s*\)', s)
+                        if m2:
+                            yield m2.group(1).strip(), m2.group(2).strip()
+                        else:
+                            # fallback: nome inteiro, preço vazio
+                            yield s, ''
+
+        # normalize query tokens (without stopwords) to try to detect specific items
+        q_norm = normalize_text(query or '')
+        tokens = [t for t in q_norm.split() if t]
+        
+        # Remove generic words that don't identify specific menu items
+        generic_words = ['lanche', 'lanches', 'hamburguer', 'hamburgueres', 'bebida', 'bebidas', 'item', 'itens', 'produto', 'produtos']
+        tokens = [t for t in tokens if t not in generic_words]
+
+        def normalize_plain(s: str) -> str:
+            return unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode().lower()
+
+        # build searchable map of menu item normalized names -> (name, price)
+        menu_index = []
+        for name, price in list(iter_items(lanches)) + list(iter_items(bebidas)):
+            menu_index.append((normalize_plain(name), name, price))
+
+        # find explicit matches from tokens
+        explicit_matches = []
+        if tokens:
+            for tok in tokens:
+                for n_norm, name, price in menu_index:
+                    if tok in n_norm:
+                        explicit_matches.append((name, price))
+
+        # If user mentioned specific items but none match the menu, respond that we don't serve it
+        if tokens and not explicit_matches:
+            # Build simplified menu summary: all lanches + Refrigerante (lata) if present
+            lanches_names = [name for name, _ in list(iter_items(lanches))]
+            bebida_names = [name for name, _ in list(iter_items(bebidas))]
+            # Prefer a beverage named 'refrigerante' if present
+            selected_beb = None
+            for b in bebida_names:
+                if 'refrigerante' in b.lower():
+                    selected_beb = b
+                    break
+            if not selected_beb and bebida_names:
+                selected_beb = bebida_names[0]
+
+            if selected_beb:
+                lanches_names.append(selected_beb)
+
+            summary = ', '.join(lanches_names)
+            return f"Desculpe, não servimos isso. Nosso cardápio tem: {summary}."
+
+        lines = []
+        if wants_lanche or (not wants_bebida and not wants_lanche):
+            items = list(iter_items(lanches))
+            if items:
+                lines.append('Preços dos lanches:')
+                for name, price in items:
+                    if price:
+                        lines.append(f"{name}: R$ {price}")
+                    else:
+                        lines.append(f"{name}")
+                lines.append('')
+
+        if wants_bebida or (not wants_bebida and not wants_lanche):
+            items = list(iter_items(bebidas))
+            if items:
+                lines.append('Preços das bebidas:')
+                for name, price in items:
+                    if price:
+                        lines.append(f"{name}: R$ {price}")
+                    else:
+                        lines.append(f"{name}")
+
+        if not lines:
+            # fallback para quando MENU_DATA estiver vazio
+            return np.random.choice(intents.get('prices', {}).get('responses', ["Desculpe, não tenho os preços agora."]))
+
+        # Use <br> so HTML rendering preserves line breaks inside the chatbot-response div
+        return '<br>'.join(lines)
+    except Exception:
+        return np.random.choice(intents.get('prices', {}).get('responses', ["Desculpe, não tenho os preços agora."]))
+
+
+# --- Integração Deepseek para intenção "ingredientes" ---
+PRATOS = [
+    "Hambúrguer", "X-Burger", "X-Salada", "X-Bacon", "X-Egg",
+    "X-Calabresa", "X-Frango", "X-Tudo", "Vegetariano"
+]
+
+# Receitas pré-cadastradas (fallback quando API não está disponível)
+RECEITAS_PRECADASTRADAS = {
+    "hambúrguer": """**Ingredientes do Hambúrguer:**
+• 1 pão de hambúrguer
+• 1 hambúrguer bovino (150g)
+• Queijo cheddar (1 fatia)
+• Alface
+• Tomate (2 rodelas)
+• Cebola (2 rodelas)
+• Molho especial da casa""",
     
-    "goodbye": {
-        "examples": [
-            "falou", "adeus", "bye", "flw", "tchau", "até mais", "até logo",
-            "valeu tchau", "xau", "obrigado tchau", "nos vemos", "falow", "adeos",
-            "bai", "baye", "tiau", "tchauu", "até maiss", "ate mais", "xauu",
-            "obrigado tchao", "nos vemoss", "fui", "fuii", "to indo", "vou indo"
-        ],
-        "responses": [
-            "Falou! Keep on rockin' e volte sempre! 🤘",
-            "Até a próxima! Obrigado por escolher o RockStar Burger!",
-            "Valeu, rockstar! A gente se vê no próximo show!",
-            "Tchau! Foi um prazer atender uma lenda como você!"
-        ]
-    },
+    "x-burger": """**Ingredientes do X-Burger:**
+• 1 pão de hambúrguer
+• 1 hambúrguer bovino (150g)
+• 2 fatias de queijo cheddar
+• Alface
+• Tomate (3 rodelas)
+• Cebola roxa (2 rodelas)
+• Picles
+• Molho especial da casa""",
     
-    "thanks": {
-        "examples": [
-            "valeu", "brigado", "mt obrigado", "obrigada", "muito grato", "grato", "agradeco",
-            "obrigado", "muito obrigado", "vlw", "agradecido", "thanks", "valeuu", "brigadu",
-            "mt obrigadu", "obrigadaa", "muito gratu", "gratu", "agradeso", "obrigadu",
-            "mto obrigado", "valw", "agradecidu", "tankss", "thank you", "grato demais"
-        ],
-        "responses": [
-            "É nóis! 🤘 Tamo junto sempre que precisar.",
-            "De nada! O rock agradece a sua presença!",
-            "Disponha! É pra isso que estamos aqui!",
-            "Tranquilo! Precisando, é só chamar no palco!"
-        ]
-    },
+    "x-bacon": """**Ingredientes do X-Bacon:**
+• 1 pão de hambúrguer
+• 1 hambúrguer bovino (150g)
+• 3 fatias de bacon crocante
+• 2 fatias de queijo cheddar
+• Alface
+• Tomate (2 rodelas)
+• Cebola caramelizada
+• Molho barbecue""",
     
-    "purchase": {
-        "examples": [
-            "quero pedir", "posso fazer um pedido?", "quero um burger", "me vê um hambúrguer",
-            "quero comprar um hambúrguer", "gostaria de fazer um pedido", "quero comprar",
-            "tô com fome", "to com fome", "pedir comida", "kero pedir", "posso faser um pedido?",
-            "kero um burger", "me ve um hamburger", "quero compra um hamburger", "gostaria de faser um pedido",
-            "kero comprar", "to com fomi", "tou com fome", "pedi comida", "fazer pedido", "vou pedir"
-        ],
-        "responses": [
-            "Show! Nossos hits são de peso! Se liga no setlist:\n• **Master of Burgers (Metallica)** - R$ 35\n• **Appetite for Destruction (Guns N' Roses)** - R$ 38\n• **Highway to Hell (AC/DC)** - R$ 33\n• **Ace of Spades (Motörhead)** - Vegano - R$ 32\n\nQual vai ser a pedida?",
-            "Volume no máximo! 🎸 Nossos clássicos incluem:\n• **The Trooper (Iron Maiden)** - R$ 36\n• **Paranoid (Black Sabbath)** - R$ 34\n• **Stairway to Heaven (Led Zeppelin)** - R$ 40\n\nQual desses hinos vai matar sua fome?",
-            "Bora pro rock! 🤘 Temos essas opções devastadoras:\n• **Master of Burgers** - O clássico do Metallica - R$ 35\n• **Highway to Hell** - Levemente apimentado - R$ 33\n• **Stairway to Heaven** - Nosso burger lendário - R$ 40\n\nO que você escolhe?",
-            "Prepara o palco! 🎸 Nossos sucessos incluem:\n• **Appetite for Destruction** - Explosivo como o Guns - R$ 38\n• **The Trooper** - Batalha épica do Iron Maiden - R$ 36\n• **Ace of Spades** - Opção vegana do Motörhead - R$ 32\n\nQual vai ser?"
-        ]
-    },
+    "x-tudo": """**Ingredientes do X-Tudo:**
+• 1 pão de hambúrguer especial
+• 2 hambúrgueres bovinos (150g cada)
+• 4 fatias de queijo cheddar
+• 4 fatias de bacon
+• 1 ovo frito
+• Presunto (2 fatias)
+• Calabresa fatiada
+• Alface, tomate, cebola
+• Milho, ervilha, batata palha
+• Molhos especiais (maionese, ketchup, mostarda)""",
     
-    "menu": {
-        "examples": [
-            "que hambúrgueres vocês têm", "quais os lanches disponíveis", "mostrem o menu",
-            "qual o cardápio", "o que vocês vendem", "cardapio completo",
-            "lista de hamburguer", "ver menu", "que lanches tem", "ke hamburgueres voces tem",
-            "kais os lanches disponiveis", "mostrem o meno", "kual o cardapio", "o ke voces vendem",
-            "cardapiu completo", "lista de hamburger", "ve menu", "ke lanches tem", "opcoes de lanche",
-            "menu completo", "cardápio de hoje", "o que tem no cardápio", "ver opções"
-        ],
-        "responses": [
-            "Aqui está o nosso setlist completo! 🤘\n\n**HITS DO METAL:**\n• **Master of Burgers (Metallica)** - R$ 35\n• **Appetite for Destruction (Guns N' Roses)** - R$ 38\n• **The Trooper (Iron Maiden)** - R$ 36\n\n**CLÁSSICOS DO ROCK:**\n• **Highway to Hell (AC/DC)** - R$ 33 (levemente apimentado! 🔥)\n• **Paranoid (Black Sabbath)** - R$ 34\n• **Stairway to Heaven (Led Zeppelin)** - R$ 40\n\n**OPÇÃO VEGANA:**\n• **Ace of Spades (Motörhead)** - R$ 32\n\nTemos também acompanhamentos e bebidas pra completar o show!",
-            "Bora conhecer nosso arsenal! 🎸\n\n**OS PESADOS:**\n• Master of Burgers - O poder do Metallica - R$ 35\n• Appetite for Destruction - Explosão Guns N' Roses - R$ 38\n• The Trooper - Batalha Iron Maiden - R$ 36\n\n**OS CLÁSSICOS:**\n• Highway to Hell - Com fogo AC/DC - R$ 33\n• Paranoid - Loucura Black Sabbath - R$ 34\n• Stairway to Heaven - Lenda Led Zeppelin - R$ 40\n\n**VEGANO ROCK:**\n• Ace of Spades - Motörhead verde - R$ 32",
-            "Nosso cardápio é puro rock! 🤘\n\n• **Master of Burgers** (Metallica) - R$ 35\n• **Appetite for Destruction** (Guns N' Roses) - R$ 38\n• **The Trooper** (Iron Maiden) - R$ 36\n• **Highway to Hell** (AC/DC) - R$ 33\n• **Paranoid** (Black Sabbath) - R$ 34\n• **Stairway to Heaven** (Led Zeppelin) - R$ 40\n• **Ace of Spades** (Motörhead - Vegano) - R$ 32\n\nTodos feitos com ingredientes de primeira!",
-            "Se liga na nossa discografia gastronômica! 🎵\n\n**METAL SUPREMO:** Master of Burgers (R$ 35), Appetite for Destruction (R$ 38), The Trooper (R$ 36)\n\n**ROCK CLÁSSICO:** Highway to Hell (R$ 33), Paranoid (R$ 34), Stairway to Heaven (R$ 40)\n\n**ALTERNATIVO:** Ace of Spades Vegano (R$ 32)\n\nQual vai ser sua escolha?"
-        ]
-    },
+    "vegetariano": """**Ingredientes do Vegetariano:**
+• 1 pão integral
+• 1 hambúrguer vegetariano (grão de bico e quinoa)
+• 2 fatias de queijo vegano
+• Alface roxa
+• Tomate (3 rodelas)
+• Cebola roxa grelhada
+• Cogumelos salteados
+• Rúcula
+• Molho de iogurte (ou veganaise)
+• Azeite e ervas"""
+}
+
+INTENT_INGREDIENTES_KEYWORDS = [
+    "ingredientes", "receita", "composição", "o que tem no", "o que leva",
+    "como é feito", "como fazer", "modo de preparo", "lista de ingredientes",
+    "o que vai no", "o q vai no", "oq vai no", "que vai no"
+]
+
+def detect_ingredientes_intent(text: str) -> bool:
+    """Detecta se a query solicita informações sobre ingredientes/receita.
+    Evita falsos positivos checando se é realmente sobre ingredientes,
+    não apenas mencionando um prato.
+    """
+    txt = (text or '').lower()
     
-    "prices": {
-        "examples": [
-            "valores dos hambúrgueres", "preço do burger", "quanto é o hambúrguer", "valor do lanche",
-            "quanto custa", "qual o preço", "precos", "custa quanto", "valor do Master of Burgers",
-            "valores dos hamburgueres", "preco do burger", "kuanto e o hamburguer", "valor do lanchi",
-            "kuanto kusta", "kual o preco", "prekos", "kusta kuanto", "valor do Master of Burgers",
-            "preço dos lanches", "quanto custa cada um", "tabela de preços", "valores", "preços dos burgers",
-            "quanto sai", "valor de cada", "preço individual"
-        ],
-        "responses": [
-            "Se liga na tabela de preços dos nossos hits:\n• **Master of Burgers**: R$ 35\n• **Appetite for Destruction**: R$ 38\n• **The Trooper**: R$ 36\n• **Highway to Hell**: R$ 33\n• **Paranoid**: R$ 34\n• **Stairway to Heaven**: R$ 40\n• **Ace of Spades (Vegano)**: R$ 32",
-            "Valores pra detonar na fome:\n• **Clássicos (R$ 32-34)**: Ace of Spades, Highway to Hell, Paranoid.\n• **Hinos do Metal (R$ 35-38)**: Master of Burgers, The Trooper, Appetite for Destruction.\n• **Lendário (R$ 40)**: Stairway to Heaven, nosso burger mais épico!",
-            "Nossos preços são justos como um bom riff! 🎸\n\nDo mais em conta ao premium:\nR$ 32 - Ace of Spades (Vegano)\nR$ 33 - Highway to Hell\nR$ 34 - Paranoid\nR$ 35 - Master of Burgers\nR$ 36 - The Trooper\nR$ 38 - Appetite for Destruction\nR$ 40 - Stairway to Heaven",
-            "Aqui está a nossa tabela rock! 🤘\n\n💰 **ENTRADA VIP (R$ 32-34):** Ace of Spades, Highway to Hell, Paranoid\n💰 **PISTA (R$ 35-36):** Master of Burgers, The Trooper\n💰 **CAMAROTE (R$ 38-40):** Appetite for Destruction, Stairway to Heaven"
-        ]
-    },
+    # Palavras que indicam perguntas sobre PREÇO ou PEDIDO (NÃO ingredientes)
+    palavras_nao_ingredientes = [
+        "quanto custa", "quanto é", "quanto vai ficar", "quanto fica", "qual o preço",
+        "qual o valor", "preço", "valor", "custa", "vai ficar",
+        "quero pedir", "queria pedir", "gostaria de pedir",
+        "me traz", "me dá", "pode trazer", "vou querer",
+        "quero um ", "quero o ", "quero uma "
+    ]
     
-    "delivery_time": {
-        "examples": [
-            "tempo de entrega", "demora quanto", "quando fica pronto", "quanto tempo para entregar",
-            "demora pra chegar", "quanto tempo demora", "prazo de entrega", "quando vai chegar",
-            "tempo de intrega", "dimora quanto", "kuando fica pronto", "kuanto tempo para entregar",
-            "dimora pra chegar", "kuanto tempo dimora", "praso de entrega", "kuando vai chegar",
-            "demora muito", "leva quanto tempo", "em quanto tempo fica pronto", "prazo",
-            "tempo pra ficar pronto", "delivery demora", "entrega rápida", "quanto tempo leva"
-        ],
-        "responses": [
-            "Nossa cozinha é rápida como um solo de guitarra! 🎸 O preparo leva de 15-20 minutos. Para delivery, some mais uns 20-30 minutos, dependendo de onde for o seu show.",
-            "Sem demora! Seu lanche fica pronto em uns 20 minutos aqui na casa. Se for pra levar, o tempo total é de uns 40-50 minutos pra chegar voando até você.",
-            "Velocidade do rock! 🤘 Preparo: 15-20 min. Delivery: + 20-30 min (varia pela distância). Total máximo: uns 50 minutos para o show chegar na sua casa!",
-            "Rápido como uma batida dupla! 🥁 15-20 min na cozinha + 20-30 min de entrega. Você vai estar saboreando nosso rock em menos de 1 hora!"
-        ]
-    },
+    # Se tem pergunta sobre preço/pedido, definitivamente NÃO é sobre ingredientes
+    if any(palavra in txt for palavra in palavras_nao_ingredientes):
+        # A menos que mencione EXPLICITAMENTE ingredientes/receita junto
+        if not any(kw in txt for kw in ["ingredientes", "receita", "composição", "como é feito", "como fazer"]):
+            return False
     
-    "complaint": {
-        "examples": [
-            "hambúrguer veio frio", "pedido errado", "demora muito", "atendimento ruim",
-            "quero reclamar", "não gostei", "reclamacao", "problema com pedido", "insatisfeito",
-            "hamburguer veio friu", "pedidu errado", "dimora muito", "atendimento ruim",
-            "kero reclamar", "nao gostei", "reclamacau", "problema com pedidu", "insatisfeitu",
-            "comida fria", "pedido atrasado", "erro no pedido", "ruim", "horrivel",
-            "demorou demais", "qualidade ruim", "não recomendo", "decepção"
-        ],
-        "responses": [
-            "Opa, falha nossa! 😟 Isso não é nada rock'n'roll. Me conta o que rolou pra gente consertar essa distorção agora mesmo.",
-            "Putz! Pedimos desculpas. Nossa missão é fazer um show perfeito. Por favor, diga qual foi o problema e vamos resolver na hora.",
-            "Que mancada! 😈 Sentimos muito por isso. Sua satisfação é o nosso maior hit. Vamos corrigir isso. O que aconteceu?",
-            "Desafinação total! 🎸 Isso não condiz com o nosso padrão rock. Conta pra gente o que houve que a gente resolve esse problema na velocidade da luz!"
-        ]
-    },
+    # Verifica se tem alguma palavra-chave de ingredientes
+    return any(kw in txt for kw in INTENT_INGREDIENTES_KEYWORDS)
+
+def consulta_deepseek(nome_prato: str, api_key: str, timeout: int = 20, max_retries: int = 3) -> str:
+    """Consulta a API Deepseek (via OpenRouter) para obter ingredientes/receita do prato.
+    Implementa retry automático com backoff exponencial para rate limits.
+    Usa cache local para evitar requisições repetidas.
+    Usa receitas pré-cadastradas como fallback quando API não está disponível.
+    """
+    import time
     
-    "hours": {
-        "examples": [
-            "horário de funcionamento", "vocês abrem hoje", "até que horas funciona", "quando fecha",
-            "que horas abrem", "aberto agora", "funcionamento", "horarios", "aberto domingo",
-            "horario de funcinamento", "voces abrem oje", "ate ke horas funciona", "kuando fecha",
-            "ke horas abrem", "abertu agora", "funcionamentu", "horarios", "abertu domingo",
-            "que horas abre", "horário hoje", "funciona que horas", "fecha que horas",
-            "aberto segunda", "horário de hoje", "que dias abrem", "segunda abre"
-        ],
-        "responses": [
-            "O show nunca para! 🤘 Funcionamos de Terça a Domingo, das 18h até a meia-noite (00h). Na Segunda, a gente descansa pra afinar os instrumentos.",
-            "Nosso palco abre de Terça a Domingo! O som começa às 18h e só para à meia-noite. Delivery vai até 23h30.",
-            "Horários do rock: 🎸\n• Terça a Domingo: 18h00 - 00h00\n• Delivery até: 23h30\n• Segunda: Fechado (dia de descanso da banda)",
-            "Palco aberto! 🎵\nTerça-feira a Domingo das 18h às 00h. Delivery rola até 23h30. Segunda é nosso dia off pra manução dos equipamentos!"
-        ]
-    },
+    # Verifica cache primeiro
+    cache_key = nome_prato.lower().strip()
+    if cache_key in st.session_state.get('ingredientes_cache', {}):
+        cached_result = st.session_state['ingredientes_cache'][cache_key]
+        return f"{cached_result}\n\n*️⃣ *(Resposta do cache local - sem consumir API)*"
     
-    "fallback": {
-        "examples": [
-            "não entendi", "o que", "como assim", "???", "hein", "nao entendi", "o ke",
-            "como asim", "???", "ein", "que", "oi?", "como", "não sei", "perdao",
-            "repete", "não compreendi", "explica", "?", "nao sei", "repeti",
-            "nao compreendi", "esplica", "fala dnv", "nao captei"
-        ],
-        "responses": [
-            "Desculpe, essa parte do som ficou meio distorcida. 😵‍💫 Posso te ajudar com o cardápio, pedidos, preços, horários ou reclamações.",
-            "Não captei essa mensagem, rockstar. Tente de novo. Quer saber sobre nossos lanches, fazer um pedido ou ver os horários?",
-            "Hmm, acho que perdi essa parte do riff. Pode reformular sua pergunta? Estou aqui pra falar dos nossos burgers lendários!",
-            "Som meio embolado aí! 🎸 Vamos tentar de novo? Posso te ajudar com menu, pedidos, preços, delivery, horários ou resolver algum problema."
+    # Verifica se tem receita pré-cadastrada (fallback imediato)
+    if cache_key in RECEITAS_PRECADASTRADAS:
+        receita = RECEITAS_PRECADASTRADAS[cache_key]
+        # Salva no cache também
+        if 'ingredientes_cache' not in st.session_state:
+            st.session_state['ingredientes_cache'] = {}
+        st.session_state['ingredientes_cache'][cache_key] = receita
+        return f"{receita}\n\n📋 *(Receita do nosso cardápio oficial)*"
+    
+    url = 'https://openrouter.ai/api/v1/chat/completions'
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    prompt = (
+        f'Forneça apenas uma lista concisa dos ingredientes e quantidades necessários '
+        f'para preparar o lanche {nome_prato}. Sem explicações adicionais.'
+    )
+    payload = {
+        'model': 'deepseek/deepseek-r1:free',
+        'messages': [
+            {'role': 'user', 'content': prompt}
         ]
     }
-}
+
+    resp = None
+    
+    for attempt in range(max_retries):
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+            
+            # Verifica o status code ANTES de fazer raise
+            if resp.status_code == 429:
+                # Rate limit - tenta novamente com backoff
+                if attempt < max_retries - 1:
+                    wait_time = 5 * (2 ** attempt)  # 5s, 10s, 20s
+                    time.sleep(wait_time)
+                    continue  # Tenta novamente
+                else:
+                    # Após todas as tentativas, retorna mensagem amigável
+                    return '⚠️ **Limite de requisições atingido!**\n\nO modelo gratuito tem limites de taxa (rate limits).\n\n**Aguarde 2-3 minutos** e tente novamente ou considere:\n- Fazer menos requisições por minuto\n- Usar um modelo pago sem rate limits'
+            elif resp.status_code == 401:
+                return '🔑 **API key inválida!**\n\nPor favor, verifique se sua chave está correta no arquivo `.streamlit/secrets.toml`'
+            
+            # Se não for erro conhecido, faz raise para capturar outros erros HTTP
+            resp.raise_for_status()
+            # Se chegou aqui, deu certo!
+            break
+            
+        except requests.exceptions.HTTPError as e:
+            # Outros erros HTTP que não são 429 ou 401
+            return f'❌ **Erro HTTP {resp.status_code if resp else "desconhecido"}:**\n\n{str(e)}'
+        except requests.exceptions.RequestException as e:
+            return f'🔌 **Erro na conexão:**\n\n{str(e)}'
+    
+    if not resp:
+        return 'Erro: nenhuma resposta recebida da API'
+
+    try:
+        j = resp.json()
+    except Exception:
+        return f'Erro ao decodificar resposta JSON: {resp.text[:200]}'
+
+    # Extrai conteúdo da resposta
+    try:
+        content = j.get('choices', [{}])[0].get('message', {}).get('content')
+    except Exception:
+        content = None
+
+    if not content:
+        return json.dumps(j, ensure_ascii=False, indent=2)
+
+    # Armazena no cache para requisições futuras
+    if 'ingredientes_cache' not in st.session_state:
+        st.session_state['ingredientes_cache'] = {}
+    st.session_state['ingredientes_cache'][cache_key] = content
+
+    return content
+
+def extract_prato_from_query(query: str) -> str:
+    """Tenta extrair o nome do prato mencionado na query.
+    Aceita variações como 'x tudo', 'xtudo', 'x-tudo', 'X-TUDO', etc.
+    """
+    import re
+    q_lower = query.lower()
+    
+    for prato in PRATOS:
+        prato_lower = prato.lower()
+        
+        # 1. Busca exata (com acentos)
+        if prato_lower in q_lower:
+            return prato
+        
+        # 2. Busca ignorando hífens e espaços
+        # Remove hífens, espaços e underscores
+        q_normalized = re.sub(r'[-\s_]', '', q_lower)
+        prato_normalized = re.sub(r'[-\s_]', '', prato_lower)
+        
+        if prato_normalized in q_normalized:
+            return prato
+        
+        # 3. Para lanches que começam com "x-", busca apenas a parte depois do "x"
+        if prato_lower.startswith('x-'):
+            # Pega a parte depois do "x-" (ex: "bacon", "tudo", "salada")
+            parte_principal = prato_lower.split('x-', 1)[1]
+            
+            # Busca por padrões como "x tudo", "xtudo", "x-tudo"
+            # Cria um padrão que aceita variações: x[\s-_]?tudo
+            pattern = r'\bx[\s\-_]?' + re.escape(parte_principal) + r'\b'
+            if re.search(pattern, q_lower):
+                return prato
+            
+            # Também busca apenas a palavra-chave (ex: só "tudo" → X-Tudo)
+            # Mas só se for uma palavra isolada ou no final/início
+            if re.search(r'\b' + re.escape(parte_principal) + r'\b', q_lower):
+                return prato
+        
+        # 4. Caso especial: hambúrguer (pode vir sem acento)
+        if prato_lower == 'hambúrguer':
+            if re.search(r'\bhamburgu?e?r\b', q_lower):
+                return prato
+    
+    return None
+
 
 # Transformar em dataframe (utterance, intent)
 rows = []
@@ -356,7 +664,14 @@ def retrieve_response(query, vect=tfidf_vect, utter_vecs=X_tfidf, df=df, thresho
     if sims[idx_sorted[0]] >= threshold:
         chosen_idx = idx_sorted[0]
         intent = df.iloc[chosen_idx]['intent']
-        resp = np.random.choice(intents[intent]['responses'])
+        # Special handling para intent 'prices' — formata os preços com base no MENU_DATA
+        if intent == 'prices':
+            try:
+                resp = build_prices_response(query)
+            except Exception:
+                resp = np.random.choice(intents[intent]['responses'])
+        else:
+            resp = np.random.choice(intents[intent]['responses'])
         return resp, intent, sims[idx_sorted[0]]
     else:
         return np.random.choice(intents['fallback']['responses']), 'fallback', sims[idx_sorted[0]]
@@ -477,7 +792,10 @@ def generate_multi_intent_response(detected_intents):
     """Gera resposta baseada em múltiplas intenções detectadas"""
     if len(detected_intents) == 1:
         intent_data = detected_intents[0]
-        resp = np.random.choice(intents[intent_data['intent']]['responses'])
+        if intent_data['intent'] == 'prices':
+            resp = build_prices_response(intent_data.get('segment'))
+        else:
+            resp = np.random.choice(intents[intent_data['intent']]['responses'])
         return resp, intent_data
     
     # Para múltiplas intenções, cria uma resposta combinada
@@ -486,22 +804,24 @@ def generate_multi_intent_response(detected_intents):
     
     for intent_data in detected_intents:
         intent = intent_data['intent']
-        if intent == 'greeting':
-            response_parts.append("Salve, rockstar! 🤘")
-        elif intent == 'menu':
-            response_parts.append("Aqui está nosso setlist:\n• Master of Burgers (R$ 35)\n• Appetite for Destruction (R$ 38)\n• Highway to Hell (R$ 33)\n• The Trooper (R$ 36)\n• Paranoid (R$ 34)\n• Stairway to Heaven (R$ 40)\n• Ace of Spades Vegano (R$ 32)")
-        elif intent == 'prices':
-            response_parts.append("Nossos preços vão de R$ 32 (Ace of Spades) até R$ 40 (Stairway to Heaven).")
-        elif intent == 'purchase':
-            response_parts.append("Qual burger vai ser? Todos são hits garantidos!")
-        elif intent == 'delivery_time':
-            response_parts.append("Preparo: 15-20 min + Delivery: 20-30 min.")
-        elif intent == 'hours':
-            response_parts.append("Funcionamos Terça a Domingo, 18h às 00h.")
-        elif intent == 'thanks':
-            response_parts.append("Valeu! 🤘")
-        elif intent == 'goodbye':
-            response_parts.append("Até a próxima! Keep rockin'!")
+        # Use as respostas definidas no arquivo de intents quando possível
+        if intent in intents and 'responses' in intents[intent]:
+            try:
+                if intent == 'prices':
+                    response_parts.append(build_prices_response(intent_data.get('segment')))
+                else:
+                    response_parts.append(np.random.choice(intents[intent]['responses']))
+            except Exception:
+                # fallback simples se algo der errado
+                response_parts.append(intents[int].get('responses', [''])[0] if intents.get(intent) else '')
+        else:
+            # Intenção não mapeada no arquivo: usa mensagens curtas padrão
+            if intent == 'greeting':
+                response_parts.append("Salve, rockstar! 🤘")
+            elif intent == 'thanks':
+                response_parts.append("Valeu! 🤘")
+            elif intent == 'goodbye':
+                response_parts.append("Até a próxima! Keep rockin'!")
     
     combined_response = "\n\n".join(response_parts)
     
@@ -521,6 +841,39 @@ def combined_respond(query, threshold_clf=0.6, threshold_retrieve=0.4):
 
 # Interface do Streamlit
 st.title('💀 Chatbot RockStar Burger 🤘')
+
+# Botão para exibir o menu extraído de `intents_database.json`
+st.markdown("### 🍽️ Cardápio")
+if st.button("Ver Menu"):
+    st.markdown("---")
+    lanches = MENU_DATA.get('lanches', [])
+    bebidas = MENU_DATA.get('bebidas', [])
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Lanches")
+        if lanches:
+            # lanches é uma lista de dicts (name, price) ou tuplas (name, price)
+            df_lanches = pd.DataFrame([
+                (i+1, itm['name'] if isinstance(itm, dict) else itm[0], itm['price'] if isinstance(itm, dict) else itm[1])
+                for i, itm in enumerate(lanches)
+            ], columns=['No.', 'Item', 'Preço'])
+            df_lanches['Preço'] = df_lanches['Preço'].apply(lambda p: f"R$ {p}")
+            st.table(df_lanches)
+        else:
+            st.info("Nenhum lanche encontrado no menu.")
+
+    with col2:
+        st.subheader("Bebidas")
+        if bebidas:
+            df_bebidas = pd.DataFrame([
+                (i+1, itm['name'] if isinstance(itm, dict) else itm[0], itm['price'] if isinstance(itm, dict) else itm[1])
+                for i, itm in enumerate(bebidas)
+            ], columns=['No.', 'Item', 'Preço'])
+            df_bebidas['Preço'] = df_bebidas['Preço'].apply(lambda p: f"R$ {p}")
+            st.table(df_bebidas)
+        else:
+            st.info("Nenhuma bebida encontrada no menu.")
 
 # Sidebar com informações
 # NOTA: A API do Streamlit posiciona a sidebar sempre à esquerda.
@@ -564,102 +917,154 @@ else:  # Retrieval only
 # Input do usuário
 st.markdown("### 💬 Mande seu recado para a banda")
 
+# usamos session_state para permitir que botões 'Pedir' preencham o campo
+if 'user_input' not in st.session_state:
+    st.session_state['user_input'] = ''
+
+# Cache de ingredientes para evitar rate limits da API
+if 'ingredientes_cache' not in st.session_state:
+    st.session_state['ingredientes_cache'] = {}
+
 user_input = st.text_area(
     "Digite sua mensagem:",  
     height=100,
-    placeholder="Ex: E aí! Quero um Master of Burgers. Quanto tempo demora?"
+    placeholder="Ex: E aí! Quero um Master of Burgers. Quanto tempo demora?",
+    key='user_input'
 )
 
 # Botão de envio
 if st.button("🎸 Enviar Mensagem", type="primary"):
     if user_input:
-        with st.spinner('Afinando os instrumentos... 🎸'):
-            if mode == '🔄 Híbrido (Recomendado)':
-                response, detected_intents, primary_intent = combined_respond(user_input, threshold_clf, threshold_ret)
-            elif mode == '🎯 Apenas Classificador':
-                response, detected_intents, primary_intent = combined_respond(user_input, threshold_clf, 0.0)
-            else:  # Retrieval only
-                resp, intent, confidence = retrieve_response(user_input, threshold=threshold_ret)
-                source = 'retrieval' if intent != 'fallback' else 'fallback'
-                # Converte para o novo formato
-                detected_intents = [{
-                    'intent': intent,
-                    'confidence': confidence,
-                    'method': source,
-                    'segment': user_input
-                }]
-                primary_intent = detected_intents[0]
-                response = resp
-        
-        # Exibição dos resultados
-        st.markdown("---")
-        
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.markdown("**👤 Você disse:**")
-        with col2:
-            st.info(user_input)
-            
-        st.markdown("**🤖 RockStar Burger responde:**")
-        st.markdown(f'<div class="chatbot-response">{response}</div>', unsafe_allow_html=True)
-        
-        # Análise técnica
-        st.markdown("### 📊 Backstage (Análise Técnica)")
-        
-        # Mostra todas as intenções detectadas
-        st.markdown("**🎯 Intenções Detectadas:**")
-        
-        if len(detected_intents) == 1:
-            # Uma única intenção
-            intent_data = detected_intents[0]
-            intent_display = intent_data['intent'].replace('_', ' ').title()
-            confidence_pct = intent_data['confidence'] * 100
-            confidence_color = "🟢" if confidence_pct >= 70 else "🟡" if confidence_pct >= 50 else "🔴"
-            
-            col1, col2 = st.columns(2)
+        # Verifica primeiro se é uma intenção de ingredientes
+        if detect_ingredientes_intent(user_input):
+            # Fluxo especial para ingredientes
+            st.markdown("---")
+            col1, col2 = st.columns([1, 2])
             with col1:
-                st.success(f"**{intent_display}**")
-                st.info(f"**{confidence_color} {confidence_pct:.1f}%**")
-            
+                st.markdown("**👤 Você disse:**")
             with col2:
-                source_emoji = {
-                    'classifier': '🧠 Classificador ML',
-                    'retrieval': '🔍 Busca por Similaridade',
-                    'fallback': '❓ Resposta Padrão'
-                }
-                method_name = source_emoji.get(intent_data['method'], intent_data['method'])
-                st.warning(f"**{method_name}**")
-        else:
-            # Múltiplas intenções
-            st.info(f"**🔍 {len(detected_intents)} intenções detectadas na sua mensagem:**")
+                st.info(user_input)
             
-            for i, intent_data in enumerate(detected_intents, 1):
+            # Tenta extrair o prato da query
+            prato_mencionado = extract_prato_from_query(user_input)
+            
+            if prato_mencionado:
+                # Prato foi identificado na mensagem
+                st.markdown("**🤖 RockStar Burger responde:**")
+                with st.spinner(f'Consultando receita de {prato_mencionado}... 🔥'):
+                    try:
+                        api_key = st.secrets["deepseek"]["api_key"]
+                        resultado = consulta_deepseek(prato_mencionado, api_key)
+                        st.markdown(f'<div class="chatbot-response"><strong>Ingredientes para {prato_mencionado}:</strong><br><br>{resultado}</div>', unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Erro ao consultar ingredientes: {e}")
+                        st.markdown('<div class="chatbot-response">Desculpe, não consegui buscar os ingredientes no momento. Tente novamente mais tarde.</div>', unsafe_allow_html=True)
+            else:
+                # Prato não identificado, oferece seleção
+                st.markdown("**🤖 RockStar Burger responde:**")
+                st.markdown('<div class="chatbot-response">Claro! Sobre qual lanche você quer saber os ingredientes?</div>', unsafe_allow_html=True)
+                
+                st.markdown("### 🍔 Escolha um lanche:")
+                selected_prato = st.selectbox("Selecione o lanche:", PRATOS, key="prato_select")
+                
+                if st.button("🔍 Buscar Ingredientes", key="buscar_ing"):
+                    with st.spinner(f'Consultando receita de {selected_prato}... 🔥'):
+                        try:
+                            api_key = st.secrets["deepseek"]["api_key"]
+                            resultado = consulta_deepseek(selected_prato, api_key)
+                            st.markdown(f'<div class="chatbot-response"><strong>Ingredientes para {selected_prato}:</strong><br><br>{resultado}</div>', unsafe_allow_html=True)
+                        except Exception as e:
+                            st.error(f"Erro ao consultar ingredientes: {e}")
+                            st.markdown('<div class="chatbot-response">Desculpe, não consegui buscar os ingredientes no momento. Tente novamente mais tarde.</div>', unsafe_allow_html=True)
+        else:
+            # Fluxo normal para outras intenções
+            with st.spinner('Afinando os instrumentos... 🎸'):
+                if mode == '🔄 Híbrido (Recomendado)':
+                    response, detected_intents, primary_intent = combined_respond(user_input, threshold_clf, threshold_ret)
+                elif mode == '🎯 Apenas Classificador':
+                    response, detected_intents, primary_intent = combined_respond(user_input, threshold_clf, 0.0)
+                else:  # Retrieval only
+                    resp, intent, confidence = retrieve_response(user_input, threshold=threshold_ret)
+                    source = 'retrieval' if intent != 'fallback' else 'fallback'
+                    # Converte para o novo formato
+                    detected_intents = [{
+                        'intent': intent,
+                        'confidence': confidence,
+                        'method': source,
+                        'segment': user_input
+                    }]
+                    primary_intent = detected_intents[0]
+                    response = resp
+            
+            # Exibição dos resultados (somente para fluxo normal)
+            st.markdown("---")
+            
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.markdown("**👤 Você disse:**")
+            with col2:
+                st.info(user_input)
+                
+            st.markdown("**🤖 RockStar Burger responde:**")
+            st.markdown(f'<div class="chatbot-response">{response}</div>', unsafe_allow_html=True)
+            
+            # Análise técnica
+            st.markdown("### 📊 Backstage (Análise Técnica)")
+            
+            # Mostra todas as intenções detectadas
+            st.markdown("**🎯 Intenções Detectadas:**")
+            
+            if len(detected_intents) == 1:
+                # Uma única intenção
+                intent_data = detected_intents[0]
                 intent_display = intent_data['intent'].replace('_', ' ').title()
                 confidence_pct = intent_data['confidence'] * 100
                 confidence_color = "🟢" if confidence_pct >= 70 else "🟡" if confidence_pct >= 50 else "🔴"
                 
-                method_emoji = {
-                    'classifier': '🧠',
-                    'retrieval': '🔍',
-                    'fallback': '❓'
-                }
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.success(f"**{intent_display}**")
+                    st.info(f"**{confidence_color} {confidence_pct:.1f}%**")
                 
-                with st.expander(f"{i}. {intent_display} {confidence_color} {confidence_pct:.1f}%"):
-                    st.write(f"**Segmento analisado:** '{intent_data['segment']}'")
-                    st.write(f"**Método:** {method_emoji.get(intent_data['method'], '')} {intent_data['method'].title()}")
-                    st.write(f"**Confiança:** {confidence_pct:.1f}%")
-        
-        # Texto normalizado
-        st.markdown("### 🔤 Processamento de Texto")
-        normalized = normalize_text(user_input)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**📝 Texto Original:**")
-            st.code(user_input, language="text")
-        with col2:
-            st.markdown("**🔤 Texto Normalizado:**")
-            st.code(normalized, language="text")
+                with col2:
+                    source_emoji = {
+                        'classifier': '🧠 Classificador ML',
+                        'retrieval': '🔍 Busca por Similaridade',
+                        'fallback': '❓ Resposta Padrão'
+                    }
+                    method_name = source_emoji.get(intent_data['method'], intent_data['method'])
+                    st.warning(f"**{method_name}**")
+            else:
+                # Múltiplas intenções
+                st.info(f"**🔍 {len(detected_intents)} intenções detectadas na sua mensagem:**")
+                
+                for i, intent_data in enumerate(detected_intents, 1):
+                    intent_display = intent_data['intent'].replace('_', ' ').title()
+                    confidence_pct = intent_data['confidence'] * 100
+                    confidence_color = "🟢" if confidence_pct >= 70 else "🟡" if confidence_pct >= 50 else "🔴"
+                    
+                    method_emoji = {
+                        'classifier': '🧠',
+                        'retrieval': '🔍',
+                        'fallback': '❓'
+                    }
+                    
+                    with st.expander(f"{i}. {intent_display} {confidence_color} {confidence_pct:.1f}%"):
+                        st.write(f"**Segmento analisado:** '{intent_data['segment']}'")
+                        st.write(f"**Método:** {method_emoji.get(intent_data['method'], '')} {intent_data['method'].title()}")
+                        st.write(f"**Confiança:** {confidence_pct:.1f}%")
+            
+            # Texto normalizado
+            st.markdown("### 🔤 Processamento de Texto")
+            normalized = normalize_text(user_input)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**📝 Texto Original:**")
+                st.code(user_input, language="text")
+            with col2:
+                st.markdown("**🔤 Texto Normalizado:**")
+                st.code(normalized, language="text")
 
 # Rodapé
 st.markdown("---")
