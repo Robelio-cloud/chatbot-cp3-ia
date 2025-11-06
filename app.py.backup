@@ -252,13 +252,7 @@ def build_prices_response(query=None):
         tokens = [t for t in q_norm.split() if t]
         
         # Remove generic words that don't identify specific menu items
-        # Inclui palavras de consulta de preço para que queries genéricas como "quanto custa o lanche" retornem o menu completo
-        generic_words = [
-            'lanche', 'lanches', 'hamburguer', 'hamburgueres', 'bebida', 'bebidas', 
-            'item', 'itens', 'produto', 'produtos',
-            'quanto', 'custa', 'vale', 'preço', 'preco', 'valor', 'valo', 
-            'qual', 'quais', 'e', 'eh', 'é', 'o', 'a', 'os', 'as', 'do', 'da', 'dos', 'das'
-        ]
+        generic_words = ['lanche', 'lanches', 'hamburguer', 'hamburgueres', 'bebida', 'bebidas', 'item', 'itens', 'produto', 'produtos']
         tokens = [t for t in tokens if t not in generic_words]
 
         def normalize_plain(s: str) -> str:
@@ -277,12 +271,8 @@ def build_prices_response(query=None):
                     if tok in n_norm:
                         explicit_matches.append((name, price))
 
-        # If tokens is empty (generic query), return full menu
         # If user mentioned specific items but none match the menu, respond that we don't serve it
-        if not tokens:
-            # Generic query like "quanto custa o lanche" -> return full menu
-            pass  # Will fall through to return full menu below
-        elif tokens and not explicit_matches:
+        if tokens and not explicit_matches:
             # Build simplified menu summary: all lanches + Refrigerante (lata) if present
             lanches_names = [name for name, _ in list(iter_items(lanches))]
             bebida_names = [name for name, _ in list(iter_items(bebidas))]
@@ -302,37 +292,26 @@ def build_prices_response(query=None):
             return f"Desculpe, não servimos isso. Nosso cardápio tem: {summary}."
 
         lines = []
-        
-        # If we have explicit matches, show only those
-        if explicit_matches:
-            lines.append('Preços encontrados:')
-            for name, price in explicit_matches:
-                if price:
-                    lines.append(f"{name}: R$ {price}")
-                else:
-                    lines.append(f"{name}")
-        else:
-            # Show full menu (lanches and/or bebidas based on query)
-            if wants_lanche or (not wants_bebida and not wants_lanche):
-                items = list(iter_items(lanches))
-                if items:
-                    lines.append('Preços dos lanches:')
-                    for name, price in items:
-                        if price:
-                            lines.append(f"{name}: R$ {price}")
-                        else:
-                            lines.append(f"{name}")
-                    lines.append('')
+        if wants_lanche or (not wants_bebida and not wants_lanche):
+            items = list(iter_items(lanches))
+            if items:
+                lines.append('Preços dos lanches:')
+                for name, price in items:
+                    if price:
+                        lines.append(f"{name}: R$ {price}")
+                    else:
+                        lines.append(f"{name}")
+                lines.append('')
 
-            if wants_bebida or (not wants_bebida and not wants_lanche):
-                items = list(iter_items(bebidas))
-                if items:
-                    lines.append('Preços das bebidas:')
-                    for name, price in items:
-                        if price:
-                            lines.append(f"{name}: R$ {price}")
-                        else:
-                            lines.append(f"{name}")
+        if wants_bebida or (not wants_bebida and not wants_lanche):
+            items = list(iter_items(bebidas))
+            if items:
+                lines.append('Preços das bebidas:')
+                for name, price in items:
+                    if price:
+                        lines.append(f"{name}: R$ {price}")
+                    else:
+                        lines.append(f"{name}")
 
         if not lines:
             # fallback para quando MENU_DATA estiver vazio
@@ -353,100 +332,57 @@ PRATOS = [
 # Receitas pré-cadastradas (fallback quando API não está disponível)
 RECEITAS_PRECADASTRADAS = {
     "hambúrguer": """**Ingredientes do Hambúrguer:**
-• 1 pão de hambúrguer (contém glúten)
+• 1 pão de hambúrguer
 • 1 hambúrguer bovino (150g)
-• Queijo cheddar (1 fatia) - **ALERGÊNICO: Leite**
+• Queijo cheddar (1 fatia)
 • Alface
 • Tomate (2 rodelas)
 • Cebola (2 rodelas)
-• Molho especial da casa (contém ovos) - **ALERGÊNICO: Ovos**""",
+• Molho especial da casa""",
     
     "x-burger": """**Ingredientes do X-Burger:**
-• 1 pão de hambúrguer (contém glúten) - **ALERGÊNICO: Trigo**
+• 1 pão de hambúrguer
 • 1 hambúrguer bovino (150g)
-• 2 fatias de queijo cheddar - **ALERGÊNICO: Leite**
+• 2 fatias de queijo cheddar
 • Alface
 • Tomate (3 rodelas)
 • Cebola roxa (2 rodelas)
 • Picles
-• Molho especial da casa - **ALERGÊNICO: Ovos**""",
+• Molho especial da casa""",
     
     "x-bacon": """**Ingredientes do X-Bacon:**
-• 1 pão de hambúrguer (contém glúten) - **ALERGÊNICO: Trigo**
+• 1 pão de hambúrguer
 • 1 hambúrguer bovino (150g)
 • 3 fatias de bacon crocante
-• 2 fatias de queijo cheddar - **ALERGÊNICO: Leite**
+• 2 fatias de queijo cheddar
 • Alface
 • Tomate (2 rodelas)
 • Cebola caramelizada
 • Molho barbecue""",
     
-    "x-salada": """**Ingredientes do X-Salada:**
-• 1 pão de hambúrguer (contém glúten) - **ALERGÊNICO: Trigo**
-• 1 hambúrguer bovino (150g)
-• Queijo mussarela (2 fatias) - **ALERGÊNICO: Leite**
-• Alface (porção generosa)
-• Tomate (4 rodelas)
-• Cebola (2 rodelas)
-• Cenoura ralada
-• Milho
-• Maionese - **ALERGÊNICO: Ovos**""",
-    
     "x-tudo": """**Ingredientes do X-Tudo:**
-• 1 pão de hambúrguer especial (contém glúten) - **ALERGÊNICO: Trigo**
+• 1 pão de hambúrguer especial
 • 2 hambúrgueres bovinos (150g cada)
-• 4 fatias de queijo cheddar - **ALERGÊNICO: Leite**
+• 4 fatias de queijo cheddar
 • 4 fatias de bacon
-• 1 ovo frito - **ALERGÊNICO: Ovos**
+• 1 ovo frito
 • Presunto (2 fatias)
 • Calabresa fatiada
 • Alface, tomate, cebola
 • Milho, ervilha, batata palha
-• Molhos especiais (maionese, ketchup, mostarda) - **ALERGÊNICO: Ovos (maionese)**""",
+• Molhos especiais (maionese, ketchup, mostarda)""",
     
     "vegetariano": """**Ingredientes do Vegetariano:**
-• 1 pão integral (contém glúten) - **ALERGÊNICO: Trigo**
+• 1 pão integral
 • 1 hambúrguer vegetariano (grão de bico e quinoa)
-• 2 fatias de queijo vegano (sem lactose)
+• 2 fatias de queijo vegano
 • Alface roxa
 • Tomate (3 rodelas)
 • Cebola roxa grelhada
 • Cogumelos salteados
 • Rúcula
-• Molho de iogurte vegetal (ou veganaise)
-• Azeite e ervas
-
-*Opção vegana disponível sem queijo*""",
-    
-    "refrigerante": """**Ingredientes/Composição do Refrigerante:**
-• Água gaseificada
-• Açúcar ou adoçante (dependendo da versão)
-• Concentrado de frutas ou saborizantes artificiais
-• Acidulante (ácido cítrico)
-• Conservantes
-• Corante caramelo
-
-*Disponível em versões: Coca-Cola, Guaraná, Fanta, Sprite*
-*Opções: Normal ou Zero*""",
-    
-    "suco natural": """**Ingredientes do Suco Natural:**
-• Frutas frescas da estação (laranja, limão, morango, maracujá)
-• Água filtrada
-• Açúcar ou mel (opcional)
-• Gelo
-
-*100% natural, sem conservantes ou corantes artificiais*
-*Consulte sabores disponíveis no dia*""",
-    
-    "milkshake": """**Ingredientes do Milkshake:**
-• Sorvete de creme (500ml) - **ALERGÊNICO: Leite**
-• Leite integral (200ml) - **ALERGÊNICO: Leite**
-• Calda de chocolate, morango ou baunilha
-• Chantilly - **ALERGÊNICO: Leite**
-• Cobertura especial
-
-*Sabores disponíveis: Chocolate, Morango, Baunilha, Ovomaltine*
-**⚠️ CONTÉM LACTOSE**"""
+• Molho de iogurte (ou veganaise)
+• Azeite e ervas"""
 }
 
 INTENT_INGREDIENTES_KEYWORDS = [
@@ -480,93 +416,41 @@ def detect_ingredientes_intent(text: str) -> bool:
     # Verifica se tem alguma palavra-chave de ingredientes
     return any(kw in txt for kw in INTENT_INGREDIENTES_KEYWORDS)
 
-def consulta_deepseek(nome_prato: str, api_key: str, timeout: int = 30, max_retries: int = 5) -> str:
+def consulta_deepseek(nome_prato: str, api_key: str, timeout: int = 20, max_retries: int = 3) -> str:
     """Consulta a API Deepseek (via OpenRouter) para obter ingredientes/receita do prato.
     Implementa retry automático com backoff exponencial para rate limits.
     Usa cache local para evitar requisições repetidas.
     Usa receitas pré-cadastradas como fallback quando API não está disponível.
     """
     import time
-    import re
     
-    # Normaliza o nome do prato para buscar no cache e receitas
-    # Remove acentos, hífens, espaços extras
-    def normalize_prato_name(name: str) -> str:
-        n = name.lower().strip()
-        # Remove acentos
-        n = unicodedata.normalize('NFKD', n).encode('ASCII', 'ignore').decode()
-        # Remove hífens e espaços múltiplos
-        n = re.sub(r'[-\s]+', ' ', n).strip()
-        return n
-    
-    cache_key = normalize_prato_name(nome_prato)
-    
-    # Verifica cache primeiro (apenas para consultas já feitas anteriormente)
+    # Verifica cache primeiro
+    cache_key = nome_prato.lower().strip()
     if cache_key in st.session_state.get('ingredientes_cache', {}):
         cached_result = st.session_state['ingredientes_cache'][cache_key]
-        return f"{cached_result}\n\n*️⃣ *(Resposta do cache - consulta anterior)*"
+        return f"{cached_result}\n\n*️⃣ *(Resposta do cache local - sem consumir API)*"
     
-    # Normaliza as chaves das receitas pré-cadastradas para usar como FALLBACK se API falhar
-    receitas_normalized = {normalize_prato_name(k): v for k, v in RECEITAS_PRECADASTRADAS.items()}
+    # Verifica se deve usar receitas pré-cadastradas
+    use_precadastradas = st.session_state.get('use_receitas_precadastradas', True)
     
-    # ESTRATÉGIA: SEMPRE tenta API Deepseek PRIMEIRO
-    # Receitas pré-cadastradas são usadas APENAS como fallback emergencial se API falhar completamente
+    # Verifica se tem receita pré-cadastrada (fallback imediato) SE a opção estiver ativada
+    if use_precadastradas and cache_key in RECEITAS_PRECADASTRADAS:
+        receita = RECEITAS_PRECADASTRADAS[cache_key]
+        # Salva no cache também
+        if 'ingredientes_cache' not in st.session_state:
+            st.session_state['ingredientes_cache'] = {}
+        st.session_state['ingredientes_cache'][cache_key] = receita
+        return f"{receita}\n\n📋 *(Receita do nosso cardápio oficial)*"
     
-    # Mostra indicador de que está consultando a API
-    with st.spinner(f'🔍 Consultando API Deepseek para obter ingredientes de **{nome_prato}**...'):
-        url = 'https://openrouter.ai/api/v1/chat/completions'
-        headers = {
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json',
-        }
-        prompt = f"""# Contextualização
-
-Você é um chef de cozinha da região metropolitana de São Paulo Brasil e trabalha numa hamburgueria renomada. Seu restaurante tem ótimas recomendações.
-
-# Tarefa
-
-Passe os ingredientes da receita do {nome_prato} que você faz, incluindo informações sobre os possíveis alergênicos.
-Traga informações única e exclusivamente dos ingredientes, sem modo de preparo e outras informações.
-
-# Formato da resposta
-
-Responda no seguinte formato JSON:
-
-{{
-  "ingredientes": [
-    {{
-      "nome": "nome do ingrediente",
-      "quantidade": "quantidade do ingrediente",
-      "unidade": "unidade de medida",
-      "alergenico": true/false
-    }}
-  ]
-}}
-
-# Exemplo de resposta
-
-{{
-    "ingredientes": [
-        {{
-            "nome": "Farinha de Trigo",
-            "quantidade": "500",
-            "unidade": "gramas",
-            "alergenico": true
-        }},
-        {{
-            "nome": "Ovos",
-            "quantidade": "3",
-            "unidade": "unidades",
-            "alergenico": true
-        }},
-        {{
-            "nome": "Açúcar",
-            "quantidade": "1",
-            "unidade": "xícara",
-            "alergenico": false
-        }}
-    ]
-}}"""
+    url = 'https://openrouter.ai/api/v1/chat/completions'
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    prompt = (
+        f'Forneça apenas uma lista concisa dos ingredientes e quantidades necessários '
+        f'para preparar o lanche {nome_prato}. Sem explicações adicionais.'
+    )
     payload = {
         'model': 'deepseek/deepseek-r1:free',
         'messages': [
@@ -582,25 +466,14 @@ Responda no seguinte formato JSON:
             
             # Verifica o status code ANTES de fazer raise
             if resp.status_code == 429:
-                # Rate limit - tenta novamente com backoff exponencial mais agressivo
+                # Rate limit - tenta novamente com backoff
                 if attempt < max_retries - 1:
-                    # Backoff: 10s, 30s, 60s, 120s (aumentado para evitar rate limits)
-                    wait_time = 10 * (2 ** attempt)
-                    st.warning(f"⏳ Rate limit detectado. Aguardando {wait_time}s antes de tentar novamente... (tentativa {attempt + 1}/{max_retries})")
+                    wait_time = 5 * (2 ** attempt)  # 5s, 10s, 20s
                     time.sleep(wait_time)
                     continue  # Tenta novamente
                 else:
-                    # Após TODAS as tentativas (5x com backoff longo), usa fallback APENAS em último caso
-                    if cache_key in receitas_normalized:
-                        receita = receitas_normalized[cache_key]
-                        # Salva no cache também
-                        if 'ingredientes_cache' not in st.session_state:
-                            st.session_state['ingredientes_cache'] = {}
-                        st.session_state['ingredientes_cache'][cache_key] = receita
-                        return f"{receita}\n\n⚠️ *(API Deepseek indisponível após 5 tentativas - usando fallback local)*"
-                    else:
-                        # Se não tem receita pré-cadastrada, retorna mensagem de erro clara
-                        return '❌ **API Deepseek indisponível**\n\nApós 5 tentativas com backoff exponencial (total ~4 minutos), a API continua retornando rate limit 429.\n\n**Possíveis causas:**\n• Limite diário da API gratuita atingido\n• Muitas requisições recentes\n• Serviço temporariamente sobrecarregado\n\n**Soluções:**\n• Aguarde alguns minutos e tente novamente\n• Use uma API key paga (sem rate limits)\n• Verifique o status em: https://openrouter.ai/status'
+                    # Após todas as tentativas, retorna mensagem amigável
+                    return '⚠️ **Limite de requisições atingido!**\n\nO modelo gratuito tem limites de taxa (rate limits).\n\n**Aguarde 2-3 minutos** e tente novamente ou considere:\n- Fazer menos requisições por minuto\n- Usar um modelo pago sem rate limits'
             elif resp.status_code == 401:
                 return '🔑 **API key inválida!**\n\nPor favor, verifique se sua chave está correta no arquivo `.streamlit/secrets.toml`'
             
@@ -798,9 +671,7 @@ def retrieve_response(query, vect=tfidf_vect, utter_vecs=X_tfidf, df=df, thresho
         if intent == 'prices':
             try:
                 resp = build_prices_response(query)
-                print(f"DEBUG - build_prices_response retornou: {resp[:200]}...")  # Debug
-            except Exception as e:
-                print(f"DEBUG - Erro em build_prices_response: {e}")  # Debug
+            except Exception:
                 resp = np.random.choice(intents[intent]['responses'])
         else:
             resp = np.random.choice(intents[intent]['responses'])
@@ -922,23 +793,10 @@ def detect_multiple_intents(query, threshold_clf=0.3, threshold_retrieve=0.3):
 
 def generate_multi_intent_response(detected_intents):
     """Gera resposta baseada em múltiplas intenções detectadas"""
-    import sys
-    print("="*50, file=sys.stderr)
-    print(f"🎯 INTENTS DETECTADAS ({len(detected_intents)}): {[d['intent'] for d in detected_intents]}", file=sys.stderr)
-    print("="*50, file=sys.stderr)
-    sys.stderr.flush()
-    
     if len(detected_intents) == 1:
         intent_data = detected_intents[0]
         if intent_data['intent'] == 'prices':
-            try:
-                resp = build_prices_response(intent_data.get('segment'))
-                # Se a resposta for a mensagem de erro "não servimos", tenta resposta padrão
-                if "não servimos isso" in resp.lower():
-                    resp = build_prices_response(None)  # Tenta com query vazia (menu completo)
-            except Exception as e:
-                # Fallback: retorna resposta do JSON se build_prices_response falhar
-                resp = np.random.choice(intents['prices']['responses'])
+            resp = build_prices_response(intent_data.get('segment'))
         else:
             resp = np.random.choice(intents[intent_data['intent']]['responses'])
         return resp, intent_data
@@ -953,13 +811,10 @@ def generate_multi_intent_response(detected_intents):
         if intent in intents and 'responses' in intents[intent]:
             try:
                 if intent == 'prices':
-                    resp_prices = build_prices_response(intent_data.get('segment'))
-                    print(f"DEBUG multi - build_prices_response retornou: {resp_prices[:200]}...")  # Debug
-                    response_parts.append(resp_prices)
+                    response_parts.append(build_prices_response(intent_data.get('segment')))
                 else:
                     response_parts.append(np.random.choice(intents[intent]['responses']))
-            except Exception as e:
-                print(f"DEBUG multi - Erro: {e}")  # Debug
+            except Exception:
                 # fallback simples se algo der errado
                 response_parts.append(intents[int].get('responses', [''])[0] if intents.get(intent) else '')
         else:
@@ -1069,24 +924,18 @@ cache_size = len(st.session_state.get('ingredientes_cache', {}))
 st.sidebar.info(f"📦 Pratos em cache: {cache_size}")
 
 # Toggle para usar ou não receitas pré-cadastradas
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🤖 Integração API Deepseek")
+use_precadastradas = st.sidebar.checkbox(
+    "📋 Usar receitas oficiais", 
+    value=True,
+    help="Desmarque para sempre consultar a API Deepseek, mesmo para pratos pré-cadastrados"
+)
+if 'use_receitas_precadastradas' not in st.session_state:
+    st.session_state['use_receitas_precadastradas'] = True
+st.session_state['use_receitas_precadastradas'] = use_precadastradas
 
-st.sidebar.info("""
-**Status da integração:**
-✅ API Deepseek R1 via OpenRouter  
-✅ Retry automático com backoff exponencial (5 tentativas)  
-✅ Cache local de respostas  
-✅ Timeout: 30s por requisição
-""")
-
-if st.sidebar.button("🧹 Limpar Cache de Ingredientes", help="Remove todas as receitas armazenadas em cache"):
-    if 'ingredientes_cache' in st.session_state:
-        num_cached = len(st.session_state['ingredientes_cache'])
-        st.session_state['ingredientes_cache'] = {}
-        st.sidebar.success(f"✅ {num_cached} receita(s) removida(s) do cache!")
-    else:
-        st.sidebar.info("Cache já está vazio!")
+if st.sidebar.button("🧹 Limpar Cache", help="Remove todas as receitas armazenadas localmente"):
+    st.session_state['ingredientes_cache'] = {}
+    st.sidebar.success("✅ Cache limpo! Próximas consultas usarão a API.")
 
 # Input do usuário
 st.markdown("### 💬 Mande seu recado para a banda")
@@ -1140,20 +989,9 @@ if st.button("🎸 Enviar Mensagem", type="primary"):
                     if st.button(f"� {prato}", key=f"ing_{prato}", use_container_width=True):
                         with st.spinner(f'Consultando receita de {prato}... 🔥'):
                             try:
-                                import json
                                 api_key = st.secrets["deepseek"]["api_key"]
                                 resultado = consulta_deepseek(prato, api_key)
-                                st.markdown(f'<div class="chatbot-response"><strong>🍔 Ingredientes para {prato}:</strong></div>', unsafe_allow_html=True)
-                                
-                                # Tenta parsear como JSON para exibição estruturada
-                                try:
-                                    # Remove possíveis marcadores de cache/mensagens
-                                    resultado_limpo = resultado.split('\n\n*️⃣')[0].split('\n\n📋')[0].strip()
-                                    dados_json = json.loads(resultado_limpo)
-                                    st.json(dados_json, expanded=True)
-                                except:
-                                    # Se não for JSON válido, exibe como código
-                                    st.code(resultado, language='json', line_numbers=False)
+                                st.markdown(f'<div class="chatbot-response"><strong>Ingredientes para {prato}:</strong><br><br>{resultado}</div>', unsafe_allow_html=True)
                             except Exception as e:
                                 st.error(f"Erro ao consultar ingredientes: {e}")
                                 st.markdown('<div class="chatbot-response">Desculpe, não consegui buscar os ingredientes no momento. Tente novamente mais tarde.</div>', unsafe_allow_html=True)
@@ -1246,47 +1084,6 @@ if st.button("🎸 Enviar Mensagem", type="primary"):
             with col2:
                 st.markdown("**🔤 Texto Normalizado:**")
                 st.code(normalized, language="text")
-
-# Menu de ingredientes (fora do botão principal para permitir clicks)
-if st.session_state.get('show_ingredientes_menu', False):
-    st.markdown("---")
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.markdown("**👤 Você disse:**")
-    with col2:
-        st.info(st.session_state.get('last_user_input', ''))
-    
-    st.markdown("**🤖 RockStar Burger responde:**")
-    st.markdown('<div class="chatbot-response">Beleza! 🎸 Escolha o lanche que você quer saber os ingredientes:</div>', unsafe_allow_html=True)
-    
-    # Grade de botões com os pratos
-    st.markdown("### 🍔 Nossos Lanches:")
-    cols = st.columns(3)
-    for idx, prato in enumerate(PRATOS):
-        with cols[idx % 3]:
-            if st.button(f"🔥 {prato}", key=f"ing_{prato}", use_container_width=True):
-                with st.spinner(f'Consultando receita de {prato}... 🔥'):
-                    try:
-                        import json
-                        api_key = st.secrets["deepseek"]["api_key"]
-                        resultado = consulta_deepseek(prato, api_key)
-                        st.markdown(f'<div class="chatbot-response"><strong>🍔 Ingredientes para {prato}:</strong></div>', unsafe_allow_html=True)
-                        
-                        # Tenta parsear como JSON para exibição estruturada
-                        try:
-                            # Remove possíveis marcadores de cache/mensagens
-                            resultado_limpo = resultado.split('\n\n*️⃣')[0].split('\n\n📋')[0].strip()
-                            dados_json = json.loads(resultado_limpo)
-                            st.json(dados_json, expanded=True)
-                        except:
-                            # Se não for JSON válido, exibe como código
-                            st.code(resultado, language='json', line_numbers=False)
-                        
-                        # Desativa o menu após mostrar resultado
-                        st.session_state['show_ingredientes_menu'] = False
-                    except Exception as e:
-                        st.error(f"Erro ao consultar ingredientes: {e}")
-                        st.markdown('<div class="chatbot-response">Desculpe, não consegui buscar os ingredientes no momento. Tente novamente mais tarde.</div>', unsafe_allow_html=True)
 
 # Rodapé
 st.markdown("---")

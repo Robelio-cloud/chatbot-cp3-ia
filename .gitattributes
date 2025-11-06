@@ -1,0 +1,11 @@
+# Preserve LF line endings for Jupyter Notebooks
+*.ipynb text eol=lf
+
+# Python files use native line endings
+*.py text
+
+# JSON files preserve LF
+*.json text eol=lf
+
+# Markdown uses native endings
+*.md text
