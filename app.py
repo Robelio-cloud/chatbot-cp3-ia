@@ -1141,32 +1141,6 @@ if st.button("🎸 Enviar Mensagem", type="primary"):
                         with st.spinner(f'Consultando receita de {prato}... 🔥'):
                             try:
                                 import json
-                                
-                                # Verifica se a API key está configurada
-                                if "deepseek" not in st.secrets or "api_key" not in st.secrets.get("deepseek", {}):
-                                    st.error("🔑 **API Key não configurada!**")
-                                    st.warning("""
-                                    **Para usar a funcionalidade de ingredientes, configure a API key do Deepseek:**
-                                    
-                                    **No Streamlit Cloud:**
-                                    1. Acesse o dashboard da sua app
-                                    2. Clique em **Settings** (⚙️)
-                                    3. Vá em **Secrets**
-                                    4. Adicione:
-                                    ```
-                                    [deepseek]
-                                    api_key = "sk-or-v1-SUA_CHAVE_AQUI"
-                                    ```
-                                    5. Clique em **Save**
-                                    
-                                    **Localmente:**
-                                    Crie o arquivo `.streamlit/secrets.toml` com o mesmo conteúdo acima.
-                                    
-                                    📚 [Documentação oficial](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management)
-                                    """)
-                                    st.info("💡 **Obtenha uma API key gratuita em:** https://openrouter.ai")
-                                    st.stop()
-                                
                                 api_key = st.secrets["deepseek"]["api_key"]
                                 resultado = consulta_deepseek(prato, api_key)
                                 st.markdown(f'<div class="chatbot-response"><strong>🍔 Ingredientes para {prato}:</strong></div>', unsafe_allow_html=True)
@@ -1180,11 +1154,8 @@ if st.button("🎸 Enviar Mensagem", type="primary"):
                                 except:
                                     # Se não for JSON válido, exibe como código
                                     st.code(resultado, language='json', line_numbers=False)
-                            except KeyError as e:
-                                st.error(f"🔑 **Erro de configuração:** {e}")
-                                st.warning("A API key do Deepseek não está configurada corretamente. Veja as instruções acima.")
                             except Exception as e:
-                                st.error(f"❌ Erro ao consultar ingredientes: {e}")
+                                st.error(f"Erro ao consultar ingredientes: {e}")
                                 st.markdown('<div class="chatbot-response">Desculpe, não consegui buscar os ingredientes no momento. Tente novamente mais tarde.</div>', unsafe_allow_html=True)
         else:
             # Fluxo normal para outras intenções
@@ -1297,32 +1268,6 @@ if st.session_state.get('show_ingredientes_menu', False):
                 with st.spinner(f'Consultando receita de {prato}... 🔥'):
                     try:
                         import json
-                        
-                        # Verifica se a API key está configurada
-                        if "deepseek" not in st.secrets or "api_key" not in st.secrets.get("deepseek", {}):
-                            st.error("🔑 **API Key não configurada!**")
-                            st.warning("""
-                            **Para usar a funcionalidade de ingredientes, configure a API key do Deepseek:**
-                            
-                            **No Streamlit Cloud:**
-                            1. Acesse o dashboard da sua app
-                            2. Clique em **Settings** (⚙️)
-                            3. Vá em **Secrets**
-                            4. Adicione:
-                            ```
-                            [deepseek]
-                            api_key = "sk-or-v1-SUA_CHAVE_AQUI"
-                            ```
-                            5. Clique em **Save**
-                            
-                            **Localmente:**
-                            Crie o arquivo `.streamlit/secrets.toml` com o mesmo conteúdo acima.
-                            
-                            📚 [Documentação oficial](https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management)
-                            """)
-                            st.info("💡 **Obtenha uma API key gratuita em:** https://openrouter.ai")
-                            st.stop()
-                        
                         api_key = st.secrets["deepseek"]["api_key"]
                         resultado = consulta_deepseek(prato, api_key)
                         st.markdown(f'<div class="chatbot-response"><strong>🍔 Ingredientes para {prato}:</strong></div>', unsafe_allow_html=True)
@@ -1339,11 +1284,8 @@ if st.session_state.get('show_ingredientes_menu', False):
                         
                         # Desativa o menu após mostrar resultado
                         st.session_state['show_ingredientes_menu'] = False
-                    except KeyError as e:
-                        st.error(f"🔑 **Erro de configuração:** {e}")
-                        st.warning("A API key do Deepseek não está configurada corretamente. Veja as instruções acima.")
                     except Exception as e:
-                        st.error(f"❌ Erro ao consultar ingredientes: {e}")
+                        st.error(f"Erro ao consultar ingredientes: {e}")
                         st.markdown('<div class="chatbot-response">Desculpe, não consegui buscar os ingredientes no momento. Tente novamente mais tarde.</div>', unsafe_allow_html=True)
 
 # Rodapé
