@@ -402,7 +402,7 @@ git push -u origin main
 
 A aplicação já está publicada no Streamlit Community Cloud e pode ser acessada publicamente neste link:
 
-- https://chatbot-cp2-ia-j3ulgljqfw7mwln9pafpuj.streamlit.app/
+- https://chatbot-cp3-ia-pfgsp5rgufdusxows5akmq.streamlit.app/
 
 ![image](/images/chatbot-01.png)
 
