@@ -1,7 +1,9 @@
 import requests
 import json
 
-api_key = "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"
+# IMPORTANTE: Nunca commite a API key real no Git!
+# Substitua pela sua chave real antes de executar
+api_key = "SUA_API_KEY_AQUI"  # Obtenha em https://openrouter.ai/keys
 url = 'https://openrouter.ai/api/v1/chat/completions'
 
 headers = {
