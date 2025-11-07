@@ -99,21 +99,33 @@ Após executar, abra seu navegador em:
 
 ```
 chatbot-cp3-ia/
-├── app.py                           # Aplicação principal Streamlit
-├── intents_database.json            # Base de dados das intenções (500+ exemplos)
-├── menu.json                        # Cardápio com preços
-├── teste_deepseek_simples.ipynb     # Notebook de teste da API Deepseek
-├── deepseek_ingredientes.ipynb      # Notebook com desenvolvimento da integração
-├── checkpoint6.ipynb                # Checkpoint do desenvolvimento
+├── app.py                           # 🎯 Aplicação principal Streamlit (56.7 KB)
+├── app_backup_20251107_080449.py    # 💾 Backup seguro da versão estável
+├── intents_database.json            # 🧠 Base de dados das intenções (504 exemplos)
+├── menu.json                        # 🍔 Cardápio com preços (9 lanches + 7 bebidas)
+├── requirements.txt                 # 📦 Dependências do projeto
+├── .gitignore                       # 🔒 Arquivos ignorados pelo Git
+├── .gitattributes                   # ⚙️ Configurações do repositório
 ├── .streamlit/
-│   ├── secrets.toml                 # API keys (NÃO commitar!)
-│   └── config.toml                  # Configurações do Streamlit
+│   └── secrets.toml                 # 🔑 API keys (NÃO commitar!)
 ├── images/
-│   ├── chatbot-01.png              # Screenshot da aplicação
-│   └── chatbot-02.png              # Screenshot do funcionamento
-├── README.md                        # Documentação completa
-└── requirements.txt                 # Dependências do projeto
+│   ├── chatbot-01.png              # 📸 Screenshot da aplicação web
+│   └── chatbot-02.png              # 📸 Screenshot do funcionamento
+├── README.md                        # 📚 Documentação principal completa
+├── SECURITY.md                      # 🛡️ Guidelines de segurança e API keys
+└── BACKUP_INFO.md                   # 💾 Documentação dos backups do projeto
 ```
+
+### 📊 Estatísticas dos Arquivos
+
+| Arquivo | Tamanho | Descrição |
+|---------|---------|-----------|
+| `app.py` | 56.7 KB | Aplicação completa com 11 intenções |
+| `intents_database.json` | 30.0 KB | 504 exemplos de treino (v2.0) |
+| `menu.json` | 1.5 KB | Cardápio completo estruturado |
+| `README.md` | 14.0 KB | Documentação detalhada |
+| `SECURITY.md` | 3.6 KB | Guia de segurança |
+| `BACKUP_INFO.md` | 2.4 KB | Informações de backup |
 
 ## 🎯 Cardápio RockStar Burger
 
