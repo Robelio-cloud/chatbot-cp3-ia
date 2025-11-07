@@ -163,7 +163,7 @@ chatbot-cp3-ia/
 
 **Simples:**
 - "Oi, quero ver o cardápio"
-- "Quanto custa o X-TUDO?"
+- "Quanto custa o X-Tudo?"
 - "Vocês entregam?"
 
 **Múltiplas Intenções:**
