@@ -1,4 +1,4 @@
-# 🤘 RockStar Burger - Chatbot Inteligente
+# 🤘 RockStar Burger - Chatbot Inteligente + IA
 
 ![image](/images/chatbot-02.png)
 
