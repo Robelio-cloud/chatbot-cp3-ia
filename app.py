@@ -1035,6 +1035,7 @@ st.sidebar.markdown("""
   - 🦇 Tempo de Entrega
   - ☮️ Agradecimentos
   - 😈 Reclamações
+  - 🔥 Ingredientes (com IA)
   
 - **Tecnologias:**
   - TF-IDF Vectorization
