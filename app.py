@@ -20,9 +20,9 @@ st.markdown("""
         /* Importa uma fonte gótica do Google Fonts */
         @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
 
-        /* Fundo preto com estrelas brancas */
+        /* Fundo roxo púrpura avermelhado com estrelas brancas */
         .stApp {
-            background-color: #000000;
+            background-color: #4A0E4E; /* Roxo avermelhado - púrpura */
             background-image:
                 radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
                 radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
