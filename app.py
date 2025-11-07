@@ -1187,9 +1187,9 @@ if st.button("🎸 Enviar Mensagem", type="primary"):
                 st.info(user_input)
                 
             st.markdown("**🤖 RockStar Burger responde:**")
-            # Escapar $ para evitar interpretação LaTeX no Streamlit
-            response_escaped = response.replace('$', r'\$')
-            st.markdown(f'<div class="chatbot-response">{response_escaped}</div>', unsafe_allow_html=True)
+            # Substituir $ por entidade HTML para evitar interpretação LaTeX
+            response_safe = response.replace('$', '&#36;')
+            st.markdown(f'<div class="chatbot-response">{response_safe}</div>', unsafe_allow_html=True)
             
             # Análise técnica
             st.markdown("### 📊 Backstage (Análise Técnica)")
